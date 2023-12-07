@@ -1,70 +1,25 @@
-use std::sync::Arc;
+use std::{env, sync::Arc};
 
 use axum::{
     extract::Extension,
     routing::{get, post},
-    Json, Router,
+    Router,
 };
-use axum_macros::debug_handler;
-use db::models::Notes;
+use dotenv::dotenv;
 
+use crate::db::connect::connect_db;
 use crate::db::connect::AppState;
-use crate::db::{
-    connect::{connect_db, database_coll},
-    models::User,
-};
-use futures::stream::TryStreamExt;
-use hyper::StatusCode;
-use mongodb::{bson::doc, options::FindOptions};
-use serde_json::{json, Value};
+use crate::handlers::{notes::get_all_notes, users::list_users};
 
 pub mod db;
+pub mod handlers;
 
 type StateExtension = axum::extract::Extension<Arc<AppState>>;
 
-#[debug_handler]
-async fn list_users(state: StateExtension) -> Result<(StatusCode, Json<Value>), StatusCode> {
-    let user_coll = database_coll::<User>(&state.db, "users").await;
-
-    let find_options = FindOptions::builder().sort(doc! {}).build();
-
-    let mut cursor = if let Ok(cursor) = user_coll.find(None, find_options).await {
-        cursor
-    } else {
-        panic!("Error")
-    };
-
-    let mut result = Vec::new();
-
-    while let Some(users) = cursor.try_next().await.unwrap() {
-        result.push(users)
-    }
-
-    Ok((StatusCode::OK, Json(json!(result))))
-}
-
-async fn get_all_notes(state: StateExtension) -> Result<(StatusCode, Json<Value>), StatusCode> {
-    let user_coll = database_coll::<Notes>(&state.db, "notes").await;
-
-    let find_options = FindOptions::builder().sort(doc! {}).build();
-
-    let mut cursor = if let Ok(cursor) = user_coll.find(None, find_options).await {
-        cursor
-    } else {
-        panic!("Error")
-    };
-
-    let mut result = Vec::new();
-
-    while let Some(notes) = cursor.try_next().await.unwrap() {
-        result.push(notes)
-    }
-
-    Ok((StatusCode::OK, Json(json!(result))))
-}
-
 #[tokio::main]
 async fn main() {
+    dotenv().ok();
+
     let db = connect_db().await;
 
     let app_state = AppState { db };
@@ -79,11 +34,15 @@ async fn main() {
     let mut bind_to = String::new();
 
     let ip = "0.0.0.0";
-    let port = "3000";
+    let port = if let Ok(res) = env::var("SECRET") {
+        res
+    } else {
+        "3000".to_string()
+    };
 
     bind_to.push_str(ip);
     bind_to.push_str(":");
-    bind_to.push_str(port);
+    bind_to.push_str(&port);
 
     println!("The server is open on {}:{}", ip, port);
 

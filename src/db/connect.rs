@@ -56,5 +56,4 @@ pub async fn database_coll<T>(db: &mongodb::Client, coll: &str) -> Collection<T>
         result.push(users)
     }
     Ok(result)
-}
- */
+} */
