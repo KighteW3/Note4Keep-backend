@@ -5,6 +5,7 @@ use hyper::StatusCode;
 use mongodb::{bson::doc, options::FindOptions};
 use serde_json::{json, Value};
 
+use crate::auth::{bcrypt, jwt};
 use crate::{
     db::{connect::database_coll, models::User},
     StateExtension,

@@ -11,6 +11,7 @@ use crate::db::connect::connect_db;
 use crate::db::connect::AppState;
 use crate::handlers::{notes::get_all_notes, users::list_users};
 
+pub mod auth;
 pub mod db;
 pub mod handlers;
 
@@ -34,11 +35,12 @@ async fn main() {
     let mut bind_to = String::new();
 
     let ip = "0.0.0.0";
-    let port = if let Ok(res) = env::var("SECRET") {
+    /* let port = if let Ok(res) = env::var("SECRET") {
         res
     } else {
         "3000".to_string()
-    };
+    }; */
+    let port = "3000".to_string();
 
     bind_to.push_str(ip);
     bind_to.push_str(":");
