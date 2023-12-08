@@ -1,13 +1,20 @@
-use hmac::{Hmac, Mac};
-use jwt::SignWithKey;
-use sha2::Sha256;
-use std::{any, collections::BTreeMap};
+use chrono::prelude::*;
+use jsonwebtoken::{
+    decode, encode, get_current_timestamp, Algorithm, DecodingKey, EncodingKey, Header, Validation,
+};
 
-pub async fn create_jwt(user: String, id: String, email: String, iat: u32) {
-    let key: Hmac<Sha256> = Hmac::new_from_slice(b"some-secret")?;
-    let mut claims: BTreeMap<&str, String> = BTreeMap::new();
-    claims.insert("username", &user);
-    claims.insert("userid", &id);
-    claims.insert("email", &email);
-    claims.insert("iat", &iat);
+struct Claims {
+    username: String,
+    user_id: String,
+    email: String,
+    iat: DateTime<Utc>,
+}
+
+pub async fn create_jwt(user: String, id: String, email: String) {
+    let token_structure = Claims {
+        username: user,
+        user_id: id,
+        email: email,
+        iat: Utc::now(),
+    };
 }
