@@ -5,7 +5,7 @@ use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation}
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Claims {
+pub struct Claims {
     username: String,
     userid: String,
     email: String,
@@ -43,4 +43,16 @@ pub async fn create_jwt(
     token
 }
 
-pub async fn compare_jwt() {}
+pub async fn compare_jwt(
+    token: String,
+) -> Result<jsonwebtoken::TokenData<Claims>, jsonwebtoken::errors::Error> {
+    let secret = env::var("SECRET").unwrap();
+
+    let decoded_token = decode::<Claims>(
+        &token,
+        &DecodingKey::from_secret(&secret.as_ref()),
+        &Validation::default(),
+    );
+
+    decoded_token
+}
