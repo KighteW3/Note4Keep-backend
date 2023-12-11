@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 pub struct Claims {
     username: String,
     userid: String,
-    email: String,
+    email: Option<String>,
     iat: i64,
     exp: i64,
 }
@@ -16,7 +16,7 @@ pub struct Claims {
 pub async fn create_jwt(
     user: String,
     id: String,
-    email: String,
+    email: Option<String>,
 ) -> Result<String, jsonwebtoken::errors::Error> {
     let secret = env::var("SECRET").unwrap();
 
@@ -44,7 +44,7 @@ pub async fn create_jwt(
 }
 
 pub async fn compare_jwt(
-    token: String,
+    token: &String,
 ) -> Result<jsonwebtoken::TokenData<Claims>, jsonwebtoken::errors::Error> {
     let secret = env::var("SECRET").unwrap();
 

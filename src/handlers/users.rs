@@ -3,10 +3,13 @@ use axum::{extract, Json};
 use axum_macros::debug_handler;
 use futures::TryStreamExt;
 use hyper::{Request, StatusCode};
+use mongodb::bson::Document;
 use mongodb::{bson::doc, options::FindOptions};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Number, Value};
 
+use crate::auth::bcrypt::encrypt;
+use crate::auth::jwt::create_jwt;
 use crate::auth::{bcrypt, jwt};
 use crate::db::connect::USERS;
 use crate::{
@@ -51,51 +54,61 @@ pub async fn create_user(
     let filters = doc! {"username": &user_data.username};
     let find_options = FindOptions::builder().sort(doc! {}).build();
 
-    /* match coll.find(filters, find_options).await {
-        Ok(cursor) => {
-            let mut curs_iter = if let Ok(curs) = cursor {
-                curs
-            } else {
-                panic!("Fatal error")
-            };
-
+    match coll.find(filters, find_options).await {
+        Ok(mut cursor) => {
             let mut result = Vec::new();
 
-            while let Some(users) = curs_iter.try_next().await.unwrap() {
+            while let Some(users) = cursor.try_next().await.unwrap() {
                 result.push(users)
             }
 
             if result.len() > 0 {
-                println!("{:?}", Some(&result[0]).is_some());
-                Err(StatusCode::NOT_ACCEPTABLE)
+                Err(StatusCode::CONFLICT)
             } else {
-                Ok((StatusCode::OK, Json(json!(result))))
+                let encoded_pass = encrypt(&user_data.password)
+                    .await
+                    .unwrap_or_else(|_| String::from("awdawds"));
+
+                let userid = "awdwda".to_string();
+
+                let email = if let Some(email) = user_data.email {
+                    Some(email)
+                } else {
+                    None
+                };
+
+                let data = User {
+                    user_id: userid.clone(),
+                    username: user_data.username.clone(),
+                    password: encoded_pass,
+                    email: email.clone(),
+                    ip: None,
+                };
+
+                let inserted = coll.insert_one(data, None).await;
+
+                match inserted {
+                    Ok(_) => match create_jwt(user_data.username, userid, email).await {
+                        Ok(token) => Ok((
+                            StatusCode::OK,
+                            Json(json!(doc! {"response": "User Created", "token": token})),
+                        )),
+                        Err(e) => {
+                            println!("Error: {:?}", e);
+
+                            Err(StatusCode::INTERNAL_SERVER_ERROR)
+                        }
+                    },
+                    Err(e) => {
+                        println!("Error: {:?}", e);
+                        Err(StatusCode::INTERNAL_SERVER_ERROR)
+                    }
+                }
             }
         }
-    }; */
-
-    let cursor = coll.find(filters, find_options).await;
-
-    if cursor.is_ok() {
-        let mut curs_iter = if let Ok(curs) = cursor {
-            curs
-        } else {
-            panic!("Fatal error")
-        };
-
-        let mut result = Vec::new();
-
-        while let Some(users) = curs_iter.try_next().await.unwrap() {
-            result.push(users)
+        Err(e) => {
+            println!("{:?}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
-
-        if result.len() > 0 {
-            println!("{:?}", Some(&result[0]).is_some());
-            Err(StatusCode::NOT_ACCEPTABLE)
-        } else {
-            Ok((StatusCode::OK, Json(json!(result))))
-        }
-    } else {
-        Err(StatusCode::INTERNAL_SERVER_ERROR)
     }
 }
