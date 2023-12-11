@@ -1,11 +1,16 @@
 use async_once_cell::Lazy;
 use dotenv::dotenv;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use mongodb::{
-    bson::Document,
+    bson::{doc, Document},
     options::{ClientOptions, FindOptions},
     Client, Collection, Cursor,
 };
 use std::env;
+
+pub const USERS: &str = "users";
+pub const NOTES: &str = "notes";
 
 pub struct AppState {
     pub db: mongodb::Client,
@@ -44,16 +49,24 @@ pub async fn database_coll<T>(db: &mongodb::Client, coll: &str) -> Collection<T>
 
 /* pub async fn get_users<User>(
     db: &mongodb::Client,
-    collection: &Collection<User>,
     query: Document,
     options: FindOptions,
 ) -> Result<Vec<User>, mongodb::error::Error> {
-    let mut cursor = collection.await.find(query, options).await?;
+    let user_coll = database_coll::<User>(&db, "users").await;
+
+    let find_options = FindOptions::builder().sort(doc! {}).build();
+
+    let mut cursor = if let Ok(cursor) = user_coll.find(None, find_options).await {
+        cursor
+    } else {
+        panic!("Error")
+    };
 
     let mut result = Vec::new();
 
     while let Some(users) = cursor.try_next().await.unwrap() {
         result.push(users)
     }
+
     Ok(result)
 } */
