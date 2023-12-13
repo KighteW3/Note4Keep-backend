@@ -83,9 +83,7 @@ pub async fn create_user(
                     ip: None,
                 };
 
-                let inserted = coll.insert_one(data, None).await;
-
-                match inserted {
+                match coll.insert_one(data, None).await {
                     Ok(_) => match create_jwt(user_data.username, userid, email).await {
                         Ok(token) => Ok((
                             StatusCode::OK,
@@ -126,7 +124,22 @@ pub async fn log_in(
             Some(res) => match compare(&user_data.password, &res.password).await {
                 Ok(authenticated) => {
                     if authenticated {
-                        Ok((StatusCode::OK, Json(json!({"awdaa": "Yeah"}))))
+                        let email = if let Some(e) = res.email {
+                            Some(e)
+                        } else {
+                            None
+                        };
+
+                        match create_jwt(user_data.username, res.user_id, email).await {
+                            Ok(token) => Ok((
+                                StatusCode::OK,
+                                Json(json!(doc! {"response": "Login Successful", "token": token})),
+                            )),
+                            Err(e) => {
+                                println!("Error: {:?}", e);
+                                Err(StatusCode::INTERNAL_SERVER_ERROR)
+                            }
+                        }
                     } else {
                         Err(StatusCode::UNAUTHORIZED)
                     }

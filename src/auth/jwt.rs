@@ -29,7 +29,14 @@ pub async fn create_jwt(
             .expect("valid timestamp")
             .timestamp(),
         exp: Utc
-            .with_ymd_and_hms(Utc::now().year() + 1, 10, 10, 10, 10, 10)
+            .with_ymd_and_hms(
+                Utc::now().year() + 1,
+                Utc::now().month(),
+                Utc::now().day(),
+                Utc::now().hour(),
+                Utc::now().minute(),
+                Utc::now().second(),
+            )
             .unwrap()
             .timestamp(),
     };

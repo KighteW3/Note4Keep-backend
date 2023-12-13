@@ -8,7 +8,7 @@ use axum::{
 use dotenv::dotenv;
 
 use crate::db::connect::connect_db;
-use crate::db::connect::AppState;
+use crate::db::connect::DbState;
 use crate::handlers::{
     notes::get_all_notes,
     users::{create_user, list_users, log_in},
@@ -18,24 +18,22 @@ pub mod auth;
 pub mod db;
 pub mod handlers;
 
-type StateExtension = axum::extract::Extension<Arc<AppState>>;
+type StateExtension = axum::extract::Extension<Arc<DbState>>;
 
 #[tokio::main]
 async fn main() {
     dotenv().ok();
 
-    let db = connect_db().await;
-
-    let app_state = AppState { db };
-
-    let app_state = Arc::new(app_state);
+    let db_state = Arc::new(DbState {
+        db: connect_db().await,
+    });
 
     let app = Router::new()
         .route("/api/users", post(list_users))
         .route("/api/notes", post(get_all_notes))
         .route("/api/users/create-user", post(create_user))
         .route("/api/users/login", post(log_in))
-        .layer(Extension(app_state));
+        .layer(Extension(db_state));
 
     let mut bind_to = String::new();
 

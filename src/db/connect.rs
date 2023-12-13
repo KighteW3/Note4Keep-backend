@@ -12,7 +12,7 @@ use std::env;
 pub const USERS: &str = "users";
 pub const NOTES: &str = "notes";
 
-pub struct AppState {
+pub struct DbState {
     pub db: mongodb::Client,
 }
 
