@@ -7,9 +7,12 @@ use axum::{
 };
 use dotenv::dotenv;
 
+use crate::db::connect::connect_db;
 use crate::db::connect::AppState;
-use crate::handlers::{notes::get_all_notes, users::list_users};
-use crate::{db::connect::connect_db, handlers::users::create_user};
+use crate::handlers::{
+    notes::get_all_notes,
+    users::{create_user, list_users, log_in},
+};
 
 pub mod auth;
 pub mod db;
@@ -31,6 +34,7 @@ async fn main() {
         .route("/api/users", post(list_users))
         .route("/api/notes", post(get_all_notes))
         .route("/api/users/create-user", post(create_user))
+        .route("/api/users/login", post(log_in))
         .layer(Extension(app_state));
 
     let mut bind_to = String::new();

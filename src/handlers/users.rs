@@ -8,7 +8,7 @@ use mongodb::{bson::doc, options::FindOptions};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Number, Value};
 
-use crate::auth::bcrypt::encrypt;
+use crate::auth::bcrypt::{compare, encrypt};
 use crate::auth::jwt::create_jwt;
 use crate::auth::{bcrypt, jwt};
 use crate::db::connect::USERS;
@@ -22,6 +22,12 @@ pub struct CreateUser {
     username: String,
     password: String,
     email: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LogUser {
+    username: String,
+    password: String,
 }
 
 #[debug_handler]
@@ -45,6 +51,7 @@ pub async fn list_users(state: StateExtension) -> Result<(StatusCode, Json<Value
     Ok((StatusCode::OK, Json(json!(result))))
 }
 
+#[debug_handler]
 pub async fn create_user(
     state: StateExtension,
     extract::Json(payload): extract::Json<CreateUser>,
@@ -52,19 +59,10 @@ pub async fn create_user(
     let user_data = payload;
     let coll = database_coll::<User>(&state.db, USERS).await;
     let filters = doc! {"username": &user_data.username};
-    let find_options = FindOptions::builder().sort(doc! {}).build();
 
-    match coll.find(filters, find_options).await {
-        Ok(mut cursor) => {
-            let mut result = Vec::new();
-
-            while let Some(users) = cursor.try_next().await.unwrap() {
-                result.push(users)
-            }
-
-            if result.len() > 0 {
-                Err(StatusCode::CONFLICT)
-            } else {
+    match coll.find_one(filters, None).await {
+        Ok(cursor) => match cursor {
+            None => {
                 let encoded_pass = encrypt(&user_data.password)
                     .await
                     .unwrap_or_else(|_| String::from("awdawds"));
@@ -105,9 +103,43 @@ pub async fn create_user(
                     }
                 }
             }
-        }
+            Some(_) => Err(StatusCode::CONFLICT),
+        },
         Err(e) => {
             println!("{:?}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+#[debug_handler]
+pub async fn log_in(
+    state: StateExtension,
+    extract::Json(payload): extract::Json<LogUser>,
+) -> Result<(StatusCode, Json<Value>), StatusCode> {
+    let user_data = payload;
+    let coll = database_coll::<User>(&state.db, USERS).await;
+    let filters = doc! {"username": &user_data.username};
+
+    match coll.find_one(filters, None).await {
+        Ok(cursor) => match cursor {
+            Some(res) => match compare(&user_data.password, &res.password).await {
+                Ok(authenticated) => {
+                    if authenticated {
+                        Ok((StatusCode::OK, Json(json!({"awdaa": "Yeah"}))))
+                    } else {
+                        Err(StatusCode::UNAUTHORIZED)
+                    }
+                }
+                Err(e) => {
+                    println!("Error: {:?}", e);
+                    Err(StatusCode::INTERNAL_SERVER_ERROR)
+                }
+            },
+            None => Err(StatusCode::NOT_FOUND),
+        },
+        Err(e) => {
+            println!("Error: {:?}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
