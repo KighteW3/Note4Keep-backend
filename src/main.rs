@@ -1,16 +1,12 @@
-use std::{env, sync::Arc};
+use std::sync::Arc;
 
-use axum::{
-    extract::Extension,
-    routing::{get, post},
-    Router,
-};
+use axum::{extract::Extension, routing::post, Router};
 use dotenv::dotenv;
 
 use crate::db::connect::connect_db;
 use crate::db::connect::DbState;
 use crate::handlers::{
-    notes::get_all_notes,
+    notes::{create_note, get_all_notes},
     users::{create_user, list_users, log_in},
 };
 
@@ -33,6 +29,7 @@ async fn main() {
         .route("/api/notes", post(get_all_notes))
         .route("/api/users/create-user", post(create_user))
         .route("/api/users/login", post(log_in))
+        .route("/api/notes/create-note", post(create_note))
         .layer(Extension(db_state));
 
     let mut bind_to = String::new();

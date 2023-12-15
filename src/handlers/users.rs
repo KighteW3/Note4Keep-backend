@@ -1,16 +1,15 @@
-use axum::http::HeaderValue;
 use axum::{extract, Json};
 use axum_macros::debug_handler;
 use futures::TryStreamExt;
-use hyper::{Request, StatusCode};
-use mongodb::bson::Document;
+use hyper::StatusCode;
 use mongodb::{bson::doc, options::FindOptions};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Number, Value};
+use serde_json::{json, Value};
 
-use crate::auth::bcrypt::{compare, encrypt};
-use crate::auth::jwt::create_jwt;
-use crate::auth::{bcrypt, jwt};
+use crate::auth::{
+    bcrypt::{compare, encrypt},
+    jwt::create_jwt,
+};
 use crate::db::connect::USERS;
 use crate::{
     db::{connect::database_coll, models::User},

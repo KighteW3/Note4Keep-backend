@@ -1,0 +1,9 @@
+POST http://localhost:3000/api/notes/create-note HTTP/1.1
+content-type: application/json
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6IkZlbGlwZTEzNDIxNDIyNiIsInVzZXJpZCI6ImF3ZHdkYSIsImVtYWlsIjoibWFzaWN3YWRhd2RAZ21haWwuY29tIiwiaWF0IjoxNzAyNjY3Njk3LCJleHAiOjE3MzQyOTAwMzd9.JB2NpPfDRUwcC_IeveKComiHCENs-HpAKWjqV7xoYTA
+
+{
+  "title": "politics",
+	"priority": 3,
+	"text": "lorem adawdwdadaasaa"
+}

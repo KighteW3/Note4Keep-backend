@@ -6,11 +6,11 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    username: String,
-    userid: String,
-    email: Option<String>,
-    iat: i64,
-    exp: i64,
+    pub username: String,
+    pub userid: String,
+    pub email: Option<String>,
+    pub iat: i64,
+    pub exp: i64,
 }
 
 pub async fn create_jwt(
