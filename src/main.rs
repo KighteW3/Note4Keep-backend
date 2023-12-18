@@ -9,15 +9,19 @@ use crate::handlers::{
     notes::{create_note, get_all_notes},
     users::{create_user, list_users, log_in},
 };
+use crate::utils::random_id::random_id;
 
 pub mod auth;
 pub mod db;
 pub mod handlers;
+pub mod utils;
 
 type StateExtension = axum::extract::Extension<Arc<DbState>>;
 
 #[tokio::main]
 async fn main() {
+    random_id();
+
     dotenv().ok();
 
     let db_state = Arc::new(DbState {

@@ -67,16 +67,23 @@ pub async fn create_note(
                     let headers_spaces: String = res.chars().skip(7).collect();
                     let headers_clean = headers_spaces.trim().to_string();
 
+                    let note_id = "awdadawa".to_string();
+
                     match compare_jwt(&headers_clean).await {
                         Ok(claims) => {
                             let data = Notes {
-                                note_id: "adawed".to_string(),
+                                note_id,
                                 title: note_data.title,
                                 priority: note_data.priority,
                                 text: note_data.text,
                                 user: claims.claims.userid,
                                 date: DateTime::now(),
                             };
+
+                            match coll.find_one(doc! {"note_id": &data.note_id}, None).await {
+                                Ok(_) => return Err(StatusCode::CONFLICT),
+                                _ => {}
+                            }
 
                             match coll.insert_one(data, None).await {
                                 Ok(_ins) => Ok((
