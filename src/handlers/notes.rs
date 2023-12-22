@@ -57,13 +57,15 @@ pub async fn get_notes(
     let auth_raw = if let Some(headers) = headers.get("Authorization") {
         headers
     } else {
-        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        return Err(StatusCode::BAD_REQUEST);
     };
 
-    let auth = if let Ok(a) = auth_raw.to_str() {
-        a
-    } else {
-        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    let auth = match auth_raw.to_str() {
+        Ok(res) => res,
+        Err(e) => {
+            println!("Error: {:?}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
     };
 
     let bearer = auth.to_lowercase().starts_with("bearer");
