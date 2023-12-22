@@ -1,12 +1,5 @@
-use async_once_cell::Lazy;
 use dotenv::dotenv;
-use futures::stream::StreamExt;
-use futures::stream::TryStreamExt;
-use mongodb::{
-    bson::{doc, Document},
-    options::{ClientOptions, FindOptions},
-    Client, Collection, Cursor,
-};
+use mongodb::{options::ClientOptions, Client, Collection};
 use std::env;
 
 pub const USERS: &str = "users";

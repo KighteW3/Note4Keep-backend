@@ -2,7 +2,7 @@ use rand::Rng;
 
 const WORDS: &str = "abcdefghijklmnopqrstuvwxyz";
 
-pub fn random_id() {
+pub fn random_id() -> String {
     let mut string = String::new();
 
     for _i in 0..24 {
@@ -24,6 +24,5 @@ pub fn random_id() {
         }
     }
 
-    println!("randomed: {}", string);
-    println!("len: {}", string.len())
+    string
 }

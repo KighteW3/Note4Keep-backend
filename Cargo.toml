@@ -1,5 +1,5 @@
 [package]
-name = "axum_tries"
+name = "note4keep-backend"
 version = "0.1.0"
 edition = "2021"
 

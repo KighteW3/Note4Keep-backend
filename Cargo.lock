@@ -130,28 +130,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "axum_tries"
-version = "0.1.0"
-dependencies = [
- "async-once-cell",
- "axum",
- "axum-macros",
- "bcrypt",
- "chrono",
- "dotenv",
- "futures",
- "hyper",
- "jsonwebtoken",
- "mongodb",
- "once_cell",
- "rand",
- "serde",
- "serde_json",
- "tokio",
- "tower",
-]
-
-[[package]]
 name = "backtrace"
 version = "0.3.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -993,6 +971,28 @@ dependencies = [
  "typed-builder",
  "uuid",
  "webpki-roots",
+]
+
+[[package]]
+name = "note4keep-backend"
+version = "0.1.0"
+dependencies = [
+ "async-once-cell",
+ "axum",
+ "axum-macros",
+ "bcrypt",
+ "chrono",
+ "dotenv",
+ "futures",
+ "hyper",
+ "jsonwebtoken",
+ "mongodb",
+ "once_cell",
+ "rand",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tower",
 ]
 
 [[package]]

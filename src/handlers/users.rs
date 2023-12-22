@@ -11,6 +11,7 @@ use crate::auth::{
     jwt::create_jwt,
 };
 use crate::db::connect::USERS;
+use crate::utils::random_id::random_id;
 use crate::{
     db::{connect::database_coll, models::User},
     StateExtension,
@@ -59,51 +60,57 @@ pub async fn create_user(
     let coll = database_coll::<User>(&state.db, USERS).await;
     let filters = doc! {"username": &user_data.username};
 
-    match coll.find_one(filters, None).await {
-        Ok(cursor) => match cursor {
-            None => {
-                let encoded_pass = encrypt(&user_data.password)
-                    .await
-                    .unwrap_or_else(|_| String::from("awdawds"));
+    let cursor = match coll.find_one(filters, None).await {
+        Ok(cursor) => cursor,
+        Err(e) => {
+            println!("Error: {:?}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
 
-                let userid = "awdwda".to_string();
+    match cursor {
+        None => {}
+        Some(_) => return Err(StatusCode::CONFLICT),
+    }
 
-                let email = if let Some(email) = user_data.email {
-                    Some(email)
-                } else {
-                    None
-                };
+    let encoded_pass = match encrypt(&user_data.password).await {
+        Ok(pass) => pass,
+        Err(e) => {
+            println!("Error: {:?}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
 
-                let data = User {
-                    user_id: userid.clone(),
-                    username: user_data.username.clone(),
-                    password: encoded_pass,
-                    email: email.clone(),
-                    ip: None,
-                };
+    let userid = random_id();
 
-                match coll.insert_one(data, None).await {
-                    Ok(_) => match create_jwt(user_data.username, userid, email).await {
-                        Ok(token) => Ok((
-                            StatusCode::OK,
-                            Json(json!(doc! {"response": "User Created", "token": token})),
-                        )),
-                        Err(e) => {
-                            println!("Error: {:?}", e);
+    let email = if let Some(email) = user_data.email {
+        Some(email)
+    } else {
+        None
+    };
 
-                            Err(StatusCode::INTERNAL_SERVER_ERROR)
-                        }
-                    },
-                    Err(e) => {
-                        println!("Error: {:?}", e);
-                        Err(StatusCode::INTERNAL_SERVER_ERROR)
-                    }
-                }
+    let data = User {
+        user_id: userid.clone(),
+        username: user_data.username.clone(),
+        password: encoded_pass,
+        email: email.clone(),
+        ip: None,
+    };
+
+    match coll.insert_one(data, None).await {
+        Ok(_) => match create_jwt(user_data.username, userid, email).await {
+            Ok(token) => Ok((
+                StatusCode::OK,
+                Json(json!(doc! {"response": "User Created", "token": token})),
+            )),
+            Err(e) => {
+                println!("Error: {:?}", e);
+
+                Err(StatusCode::INTERNAL_SERVER_ERROR)
             }
-            Some(_) => Err(StatusCode::CONFLICT),
         },
         Err(e) => {
-            println!("{:?}", e);
+            println!("Error: {:?}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
@@ -118,41 +125,46 @@ pub async fn log_in(
     let coll = database_coll::<User>(&state.db, USERS).await;
     let filters = doc! {"username": &user_data.username};
 
-    match coll.find_one(filters, None).await {
-        Ok(cursor) => match cursor {
-            Some(res) => match compare(&user_data.password, &res.password).await {
-                Ok(authenticated) => {
-                    if authenticated {
-                        let email = if let Some(e) = res.email {
-                            Some(e)
-                        } else {
-                            None
-                        };
-
-                        match create_jwt(user_data.username, res.user_id, email).await {
-                            Ok(token) => Ok((
-                                StatusCode::OK,
-                                Json(json!(doc! {"response": "Login Successful", "token": token})),
-                            )),
-                            Err(e) => {
-                                println!("Error: {:?}", e);
-                                Err(StatusCode::INTERNAL_SERVER_ERROR)
-                            }
-                        }
-                    } else {
-                        Err(StatusCode::UNAUTHORIZED)
-                    }
-                }
-                Err(e) => {
-                    println!("Error: {:?}", e);
-                    Err(StatusCode::INTERNAL_SERVER_ERROR)
-                }
-            },
-            None => Err(StatusCode::NOT_FOUND),
-        },
+    let cursor = match coll.find_one(filters, None).await {
+        Ok(res) => res,
         Err(e) => {
             println!("Error: {:?}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
+    };
+
+    let user_stored = if let Some(res) = cursor {
+        res
+    } else {
+        return Err(StatusCode::NOT_FOUND);
+    };
+
+    let authenticated = match compare(&user_data.password, &user_stored.password).await {
+        Ok(res) => res,
+        Err(e) => {
+            println!("Error: {:?}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    if authenticated {
+        let email = if let Some(e) = user_stored.email {
+            Some(e)
+        } else {
+            None
+        };
+
+        match create_jwt(user_data.username, user_stored.user_id, email).await {
+            Ok(token) => Ok((
+                StatusCode::OK,
+                Json(json!(doc! {"response": "Login Successful", "token": token})),
+            )),
+            Err(e) => {
+                println!("Error: {:?}", e);
+                Err(StatusCode::INTERNAL_SERVER_ERROR)
+            }
+        }
+    } else {
+        Err(StatusCode::UNAUTHORIZED)
     }
 }
