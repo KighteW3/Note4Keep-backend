@@ -9,7 +9,7 @@ use mongodb::{
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-use crate::utils::random_id::random_id;
+use crate::utils::{get_token::get_token, random_id::random_id};
 use crate::{
     auth::jwt::compare_jwt,
     db::{
@@ -24,6 +24,11 @@ pub struct CreateNote {
     title: String,
     priority: u8,
     text: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SomeNote {
+    note_phrase: String,
 }
 
 #[debug_handler]
@@ -111,30 +116,14 @@ pub async fn create_note(
     let note_data = payload;
     let coll = database_coll::<Notes>(&state.db, NOTES).await;
 
-    let headers = if let Some(res) = headers.get("Authorization") {
-        match res.to_str() {
-            Ok(str) => str,
-            Err(e) => {
-                println!("Error: {:?}", e);
-                return Err(StatusCode::INTERNAL_SERVER_ERROR);
-            }
-        }
-    } else {
-        return Err(StatusCode::BAD_REQUEST);
+    let token = match get_token(&headers) {
+        Ok(res) => res,
+        Err(e) => return Err(e),
     };
-
-    let headers_raw = headers;
-
-    if !headers_raw.to_lowercase().starts_with("bearer") {
-        return Err(StatusCode::BAD_REQUEST);
-    }
-
-    let headers_spaces: String = headers_raw.chars().skip(7).collect();
-    let headers_clean = headers_spaces.trim().to_string();
 
     let note_id = random_id();
 
-    let claims = if let Ok(claims) = compare_jwt(&headers_clean).await {
+    let claims = if let Ok(claims) = compare_jwt(&token).await {
         claims
     } else {
         return Err(StatusCode::UNAUTHORIZED);
@@ -172,4 +161,37 @@ pub async fn create_note(
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
+}
+
+pub async fn some_note(
+    state: StateExtension,
+    headers: HeaderMap,
+    extract::Json(payload): extract::Json<SomeNote>,
+) -> Result<(StatusCode, Json<Value>), StatusCode> {
+    let headers = headers;
+    let notes_data = payload;
+    let coll = database_coll::<Notes>(&state.db, NOTES).await;
+
+    let token = match get_token(&headers) {
+        Ok(res) => res,
+        Err(e) => return Err(e),
+    };
+
+    let filters = doc! {"title": &notes_data.note_phrase};
+
+    let note = match coll.find_one(filters, None).await {
+        Ok(res) => {
+            if let Some(res2) = res {
+                res2
+            } else {
+                return Err(StatusCode::NOT_FOUND);
+            }
+        }
+        Err(e) => {
+            println!("Error: {:?}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    Ok((StatusCode::OK, Json(json!(doc! {"awdad": "dawda"}))))
 }

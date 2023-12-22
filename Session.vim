@@ -13,17 +13,14 @@ if &shortmess =~ 'A'
 else
   set shortmess=aoO
 endif
-badd +109 src/handlers/notes.rs
-badd +17 src/db/connect.rs
-badd +38 term://~/Dev/projects/note4keep_back//7188:/bin/bash
-badd +5 src/utils/random_id.rs
-badd +25 src/main.rs
-badd +65 src/handlers/users.rs
+badd +34 src/handlers/notes.rs
+badd +4 src/db/connect.rs
+badd +1 src/main.rs
 argglobal
 %argdel
 edit src/handlers/notes.rs
 argglobal
-balt src/handlers/users.rs
+balt src/db/connect.rs
 setlocal fdm=manual
 setlocal fde=0
 setlocal fmr={{{,}}}
@@ -34,12 +31,12 @@ setlocal fdn=20
 setlocal fen
 silent! normal! zE
 let &fdl = &fdl
-let s:l = 114 - ((0 * winheight(0) + 19) / 38)
+let s:l = 34 - ((18 * winheight(0) + 19) / 38)
 if s:l < 1 | let s:l = 1 | endif
 keepjumps exe s:l
 normal! zt
-keepjumps 114
-normal! 022|
+keepjumps 34
+normal! 0
 tabnext 1
 if exists('s:wipebuf') && len(win_findbuf(s:wipebuf)) == 0 && getbufvar(s:wipebuf, '&buftype') isnot# 'terminal'
   silent exe 'bwipe ' . s:wipebuf
@@ -53,6 +50,7 @@ if filereadable(s:sx)
 endif
 let &g:so = s:so_save | let &g:siso = s:siso_save
 set hlsearch
+nohlsearch
 doautoall SessionLoadPost
 unlet SessionLoad
 " vim: set ft=vim :

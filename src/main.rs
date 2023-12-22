@@ -6,7 +6,7 @@ use dotenv::dotenv;
 use crate::db::connect::connect_db;
 use crate::db::connect::DbState;
 use crate::handlers::{
-    notes::{create_note, get_notes},
+    notes::{create_note, get_all_notes},
     users::{create_user, list_users, log_in},
 };
 
@@ -27,7 +27,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/api/users", post(list_users))
-        .route("/api/notes", post(get_notes))
+        .route("/api/notes", post(get_all_notes))
         .route("/api/users/create-user", post(create_user))
         .route("/api/users/login", post(log_in))
         .route("/api/notes/create-note", post(create_note))
