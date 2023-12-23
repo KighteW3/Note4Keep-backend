@@ -2,6 +2,7 @@ use axum::{extract, Json};
 use axum_macros::debug_handler;
 use futures::TryStreamExt;
 use hyper::StatusCode;
+use log::error;
 use mongodb::{bson::doc, options::FindOptions};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -63,7 +64,7 @@ pub async fn create_user(
     let cursor = match coll.find_one(filters, None).await {
         Ok(cursor) => cursor,
         Err(e) => {
-            println!("Error: {:?}", e);
+            error!("Error: {:?}", e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -76,7 +77,7 @@ pub async fn create_user(
     let encoded_pass = match encrypt(&user_data.password).await {
         Ok(pass) => pass,
         Err(e) => {
-            println!("Error: {:?}", e);
+            error!("Error: {:?}", e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -104,13 +105,13 @@ pub async fn create_user(
                 Json(json!(doc! {"response": "User Created", "token": token})),
             )),
             Err(e) => {
-                println!("Error: {:?}", e);
+                error!("Error: {:?}", e);
 
                 Err(StatusCode::INTERNAL_SERVER_ERROR)
             }
         },
         Err(e) => {
-            println!("Error: {:?}", e);
+            error!("Error: {:?}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
@@ -128,7 +129,7 @@ pub async fn log_in(
     let cursor = match coll.find_one(filters, None).await {
         Ok(res) => res,
         Err(e) => {
-            println!("Error: {:?}", e);
+            error!("Error: {:?}", e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -142,7 +143,7 @@ pub async fn log_in(
     let authenticated = match compare(&user_data.password, &user_stored.password).await {
         Ok(res) => res,
         Err(e) => {
-            println!("Error: {:?}", e);
+            error!("Error: {:?}", e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -160,7 +161,7 @@ pub async fn log_in(
                 Json(json!(doc! {"response": "Login Successful", "token": token})),
             )),
             Err(e) => {
-                println!("Error: {:?}", e);
+                error!("Error: {:?}", e);
                 Err(StatusCode::INTERNAL_SERVER_ERROR)
             }
         }

@@ -1,4 +1,5 @@
 use hyper::{HeaderMap, StatusCode};
+use log::error;
 
 pub fn get_token(headers: &HeaderMap) -> Result<String, StatusCode> {
     match headers.get("Authorization") {
@@ -6,7 +7,7 @@ pub fn get_token(headers: &HeaderMap) -> Result<String, StatusCode> {
             let authorization = match res.to_str() {
                 Ok(res) => res,
                 Err(e) => {
-                    println!("Error: {:?}", e);
+                    error!("Error: {:?}", e);
                     return Err(StatusCode::INTERNAL_SERVER_ERROR);
                 }
             };

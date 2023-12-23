@@ -2,6 +2,7 @@ use axum::{extract, Json};
 use axum_macros::debug_handler;
 use futures::TryStreamExt;
 use hyper::{HeaderMap, StatusCode};
+use log::error;
 use mongodb::{
     bson::{doc, DateTime},
     options::FindOptions,
@@ -18,7 +19,6 @@ use crate::{
     },
     StateExtension,
 };
-use regex::Regex;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateNote {
@@ -31,17 +31,6 @@ pub struct CreateNote {
 pub struct SomeNote {
     note_phrase: String,
 }
-
-/* impl Iterator for SomeNote {
-    type Item = String;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.note_phrase {
-            Some(res) => res,
-            _ => None,
-        }
-    }
-} */
 
 #[debug_handler]
 pub async fn get_all_notes(state: StateExtension) -> Result<(StatusCode, Json<Value>), StatusCode> {
@@ -80,7 +69,7 @@ pub async fn get_notes(
     let auth = match auth_raw.to_str() {
         Ok(res) => res,
         Err(e) => {
-            println!("Error: {:?}", e);
+            error!("Error: {:?}", e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -108,12 +97,12 @@ pub async fn get_notes(
                 notes.push(not)
             }
 
-            println!("Notes: {:?}", notes);
+            error!("Notes: {:?}", notes);
 
             Ok((StatusCode::OK, Json(json!(notes))))
         }
         Err(e) => {
-            println!("Error: {:?}", e);
+            error!("Error: {:?}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
@@ -158,7 +147,7 @@ pub async fn create_note(
             None => {}
         },
         Err(e) => {
-            println!("Error: {:?}", e);
+            error!("Error: {:?}", e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -169,7 +158,7 @@ pub async fn create_note(
             Json(json!(doc! {"Response": "Note created succesfully"})),
         )),
         Err(e) => {
-            println!("Error: {:?}", e);
+            error!("Error: {:?}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
@@ -197,7 +186,7 @@ pub async fn some_note(
     let claims = match compare_jwt(&token).await {
         Ok(res) => res,
         Err(e) => {
-            println!("Error: {:?}", e);
+            error!("Error: {:?}", e);
             return Err(StatusCode::UNAUTHORIZED);
         }
     };
@@ -220,7 +209,7 @@ pub async fn some_note(
             while let Some(note) = match res.try_next().await {
                 Ok(res) => res,
                 Err(e) => {
-                    println!("Error: {:?}", e);
+                    error!("Error: {:?}", e);
                     return Err(StatusCode::INTERNAL_SERVER_ERROR);
                 }
             } {
@@ -230,7 +219,7 @@ pub async fn some_note(
             all_results
         }
         Err(e) => {
-            println!("Error: {:?}", e);
+            error!("Error: {:?}", e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };

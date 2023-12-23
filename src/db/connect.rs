@@ -14,13 +14,13 @@ pub async fn connect_db() -> mongodb::Client {
 
     let uri = match env::var("MONGODB_URI") {
         Ok(key) => key,
-        Err(_) => panic!("There is no mongodb uri"),
+        Err(_) => panic!("Error: There is no mongodb uri"),
     };
 
     let mut client_options = if let Ok(parsed) = ClientOptions::parse(uri).await {
         parsed
     } else {
-        panic!("No client options parsed")
+        panic!("Error: No client options parsed")
     };
 
     client_options.app_name = Some("Note4Keep".to_string());
@@ -31,7 +31,7 @@ pub async fn connect_db() -> mongodb::Client {
             cli
         }
         Err(e) => {
-            panic!("{:?}", e)
+            panic!("Error: {:?}", e)
         }
     }
 }
