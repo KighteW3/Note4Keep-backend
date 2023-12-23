@@ -13,17 +13,16 @@ if &shortmess =~ 'A'
 else
   set shortmess=aoO
 endif
-badd +108 src/handlers/notes.rs
+badd +217 src/handlers/notes.rs
 badd +4 src/db/connect.rs
 badd +1 src/main.rs
 badd +94 src/handlers/users.rs
 badd +3 src/utils/get_token.rs
-badd +56 term://~/Dev/projects/note4keep_back//35455:/bin/bash
 argglobal
 %argdel
 edit src/handlers/notes.rs
 argglobal
-balt term://~/Dev/projects/note4keep_back//35455:/bin/bash
+balt src/db/connect.rs
 setlocal fdm=manual
 setlocal fde=0
 setlocal fmr={{{,}}}
@@ -34,12 +33,12 @@ setlocal fdn=20
 setlocal fen
 silent! normal! zE
 let &fdl = &fdl
-let s:l = 189 - ((29 * winheight(0) + 19) / 38)
+let s:l = 217 - ((31 * winheight(0) + 19) / 38)
 if s:l < 1 | let s:l = 1 | endif
 keepjumps exe s:l
 normal! zt
-keepjumps 189
-normal! 0
+keepjumps 217
+normal! 038|
 tabnext 1
 if exists('s:wipebuf') && len(win_findbuf(s:wipebuf)) == 0 && getbufvar(s:wipebuf, '&buftype') isnot# 'terminal'
   silent exe 'bwipe ' . s:wipebuf

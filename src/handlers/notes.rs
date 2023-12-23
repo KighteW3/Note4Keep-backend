@@ -32,6 +32,17 @@ pub struct SomeNote {
     note_phrase: String,
 }
 
+/* impl Iterator for SomeNote {
+    type Item = String;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.note_phrase {
+            Some(res) => res,
+            _ => None,
+        }
+    }
+} */
+
 #[debug_handler]
 pub async fn get_all_notes(state: StateExtension) -> Result<(StatusCode, Json<Value>), StatusCode> {
     let user_coll = database_coll::<Notes>(&state.db, "notes").await;
@@ -164,6 +175,7 @@ pub async fn create_note(
     }
 }
 
+#[debug_handler]
 pub async fn some_note(
     state: StateExtension,
     headers: HeaderMap,
@@ -172,6 +184,10 @@ pub async fn some_note(
     let headers = headers;
     let notes_data = payload;
     let coll = database_coll::<Notes>(&state.db, NOTES).await;
+
+    if notes_data.note_phrase.len() < 1 {
+        return Err(StatusCode::BAD_REQUEST);
+    }
 
     let token = match get_token(&headers) {
         Ok(res) => res,
@@ -186,20 +202,32 @@ pub async fn some_note(
         }
     };
 
-    // let regex = Regex::new(".*" + claims.claims.userid + ".*").unwrap();
+    let mut passphrase = String::from(".*");
+    passphrase.push_str(&notes_data.note_phrase);
+    passphrase.push_str(".*");
 
-    // IMPORTANT! Need to get notes that with the same or similar title, maybe with regex or
-    // wathever other tool
+    let formated = mongodb::bson::Regex {
+        pattern: passphrase,
+        options: String::new(),
+    };
 
-    let filters = doc! {"title": &notes_data.note_phrase, "user": &claims.claims.userid};
+    let filters = doc! {"title": formated, "user": &claims.claims.userid};
 
-    let note = match coll.find_one(filters, None).await {
-        Ok(res) => {
-            if let Some(res2) = res {
-                res2
-            } else {
-                return Err(StatusCode::NOT_FOUND);
+    let note = match coll.find(filters, None).await {
+        Ok(mut res) => {
+            let mut all_results = Vec::new();
+
+            while let Some(note) = match res.try_next().await {
+                Ok(res) => res,
+                Err(e) => {
+                    println!("Error: {:?}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            } {
+                all_results.push(note)
             }
+
+            all_results
         }
         Err(e) => {
             println!("Error: {:?}", e);
