@@ -18,6 +18,7 @@ use crate::{
     },
     StateExtension,
 };
+use regex::Regex;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateNote {
@@ -177,7 +178,20 @@ pub async fn some_note(
         Err(e) => return Err(e),
     };
 
-    let filters = doc! {"title": &notes_data.note_phrase};
+    let claims = match compare_jwt(&token).await {
+        Ok(res) => res,
+        Err(e) => {
+            println!("Error: {:?}", e);
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+    };
+
+    // let regex = Regex::new(".*" + claims.claims.userid + ".*").unwrap();
+
+    // IMPORTANT! Need to get notes that with the same or similar title, maybe with regex or
+    // wathever other tool
+
+    let filters = doc! {"title": &notes_data.note_phrase, "user": &claims.claims.userid};
 
     let note = match coll.find_one(filters, None).await {
         Ok(res) => {
@@ -193,5 +207,5 @@ pub async fn some_note(
         }
     };
 
-    Ok((StatusCode::OK, Json(json!(doc! {"awdad": "dawda"}))))
+    Ok((StatusCode::OK, Json(json!(note))))
 }
