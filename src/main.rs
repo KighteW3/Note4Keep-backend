@@ -6,9 +6,10 @@ use dotenv::dotenv;
 use crate::db::connect::connect_db;
 use crate::db::connect::DbState;
 use crate::handlers::{
-    notes::{create_note, get_all_notes, some_note},
+    notes::{create_note, get_notes, some_note, spec_note},
     users::{create_user, list_users, log_in},
 };
+use crate::utils::check_integrity::check_integrity;
 
 use std::env;
 
@@ -23,17 +24,20 @@ type StateExtension = axum::extract::Extension<Arc<DbState>>;
 async fn main() {
     dotenv().ok();
 
+    check_integrity();
+
     let db_state = Arc::new(DbState {
         db: connect_db().await,
     });
 
     let app = Router::new()
         .route("/api/users", post(list_users))
-        .route("/api/notes", post(get_all_notes))
+        .route("/api/notes", post(get_notes))
         .route("/api/users/create-user", post(create_user))
         .route("/api/users/login", post(log_in))
         .route("/api/notes/create-note", post(create_note))
         .route("/api/notes/some-note", post(some_note))
+        .route("/api/notes/spec-note", post(spec_note))
         .layer(Extension(db_state));
 
     let mut bind_to = String::new();

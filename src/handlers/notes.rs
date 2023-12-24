@@ -32,6 +32,11 @@ pub struct SomeNote {
     note_phrase: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SpecificNote {
+    note_id: String,
+}
+
 #[debug_handler]
 pub async fn get_all_notes(state: StateExtension) -> Result<(StatusCode, Json<Value>), StatusCode> {
     let user_coll = database_coll::<Notes>(&state.db, "notes").await;
@@ -89,7 +94,7 @@ pub async fn get_notes(
         Ok(_) => {}
     };
 
-    match coll.find(None, None).await {
+    let notes = match coll.find(None, None).await {
         Ok(mut cursor) => {
             let mut notes = Vec::new();
 
@@ -97,15 +102,19 @@ pub async fn get_notes(
                 notes.push(not)
             }
 
-            error!("Notes: {:?}", notes);
-
-            Ok((StatusCode::OK, Json(json!(notes))))
+            notes
         }
         Err(e) => {
             error!("Error: {:?}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
+    };
+
+    if notes.len() < 1 {
+        return Err(StatusCode::NO_CONTENT);
     }
+
+    Ok((StatusCode::OK, Json(json!(notes))))
 }
 
 #[debug_handler]
@@ -114,7 +123,7 @@ pub async fn create_note(
     headers: HeaderMap,
     extract::Json(payload): extract::Json<CreateNote>,
 ) -> Result<(StatusCode, Json<Value>), StatusCode> {
-    let note_data = payload;
+    let req = payload;
     let coll = database_coll::<Notes>(&state.db, NOTES).await;
 
     let token = match get_token(&headers) {
@@ -132,9 +141,9 @@ pub async fn create_note(
 
     let data = Notes {
         note_id,
-        title: note_data.title,
-        priority: note_data.priority,
-        text: note_data.text,
+        title: req.title,
+        priority: req.priority,
+        text: req.text,
         user: claims.claims.userid,
         date: DateTime::now(),
     };
@@ -171,10 +180,10 @@ pub async fn some_note(
     extract::Json(payload): extract::Json<SomeNote>,
 ) -> Result<(StatusCode, Json<Value>), StatusCode> {
     let headers = headers;
-    let notes_data = payload;
+    let req = payload;
     let coll = database_coll::<Notes>(&state.db, NOTES).await;
 
-    if notes_data.note_phrase.len() < 1 {
+    if req.note_phrase.len() < 1 {
         return Err(StatusCode::BAD_REQUEST);
     }
 
@@ -192,7 +201,7 @@ pub async fn some_note(
     };
 
     let mut passphrase = String::from(".*");
-    passphrase.push_str(&notes_data.note_phrase);
+    passphrase.push_str(&req.note_phrase);
     passphrase.push_str(".*");
 
     let formated = mongodb::bson::Regex {
@@ -216,6 +225,10 @@ pub async fn some_note(
                 all_results.push(note)
             }
 
+            if all_results.len() < 1 {
+                return Err(StatusCode::NO_CONTENT);
+            }
+
             all_results
         }
         Err(e) => {
@@ -225,4 +238,74 @@ pub async fn some_note(
     };
 
     Ok((StatusCode::OK, Json(json!(note))))
+}
+
+#[debug_handler]
+pub async fn spec_note(
+    state: StateExtension,
+    headers: HeaderMap,
+    extract::Json(payload): extract::Json<SpecificNote>,
+) -> Result<(StatusCode, Json<Value>), StatusCode> {
+    let headers = headers;
+    let req = payload;
+    let coll = database_coll::<Notes>(&state.db, NOTES).await;
+
+    let token = match get_token(&headers) {
+        Ok(res) => res,
+        Err(e) => return Err(e),
+    };
+
+    let claims = match compare_jwt(&token).await {
+        Ok(res) => res,
+        Err(e) => {
+            error!("Error: {:?}", e);
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+    };
+
+    let filters = doc! {"note_id": &req.note_id, "user": &claims.claims.userid};
+
+    let note = match coll.find_one(filters, None).await {
+        Ok(res) => {
+            let note = if let Some(res) = res {
+                res
+            } else {
+                return Err(StatusCode::NOT_FOUND);
+            };
+
+            note
+        }
+        Err(e) => {
+            error!("Error: {:?}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    Ok((StatusCode::OK, Json(json!(note))))
+}
+
+#[debug_handler]
+pub async fn delete_note(
+    state: StateExtension,
+    headers: HeaderMap,
+    extract::Json(payload): extract::Json<SpecificNote>,
+) -> Result<(StatusCode, Json<Value>), StatusCode> {
+    let headers = headers;
+    let req = payload;
+    let coll = database_coll::<Notes>(&state.db, NOTES).await;
+
+    let token = match get_token(&headers) {
+        Ok(res) => res,
+        Err(e) => return Err(e),
+    };
+
+    let claims = match compare_jwt(&token).await {
+        Ok(res) => res,
+        Err(e) => {
+            error!("Error: {:?}", e);
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+    };
+
+    Ok((StatusCode::OK, Json(json!(doc! {"addadaw": "awdada"}))))
 }

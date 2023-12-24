@@ -57,9 +57,9 @@ pub async fn create_user(
     state: StateExtension,
     extract::Json(payload): extract::Json<CreateUser>,
 ) -> Result<(StatusCode, Json<Value>), StatusCode> {
-    let user_data = payload;
+    let req_body = payload;
     let coll = database_coll::<User>(&state.db, USERS).await;
-    let filters = doc! {"username": &user_data.username};
+    let filters = doc! {"username": &req_body.username};
 
     let cursor = match coll.find_one(filters, None).await {
         Ok(cursor) => cursor,
@@ -74,7 +74,7 @@ pub async fn create_user(
         Some(_) => return Err(StatusCode::CONFLICT),
     }
 
-    let encoded_pass = match encrypt(&user_data.password).await {
+    let encoded_pass = match encrypt(&req_body.password).await {
         Ok(pass) => pass,
         Err(e) => {
             error!("Error: {:?}", e);
@@ -84,7 +84,7 @@ pub async fn create_user(
 
     let userid = random_id();
 
-    let email = if let Some(email) = user_data.email {
+    let email = if let Some(email) = req_body.email {
         Some(email)
     } else {
         None
@@ -92,14 +92,14 @@ pub async fn create_user(
 
     let data = User {
         user_id: userid.clone(),
-        username: user_data.username.clone(),
+        username: req_body.username.clone(),
         password: encoded_pass,
         email: email.clone(),
         ip: None,
     };
 
     match coll.insert_one(data, None).await {
-        Ok(_) => match create_jwt(user_data.username, userid, email).await {
+        Ok(_) => match create_jwt(req_body.username, userid, email).await {
             Ok(token) => Ok((
                 StatusCode::OK,
                 Json(json!(doc! {"response": "User Created", "token": token})),
@@ -122,9 +122,9 @@ pub async fn log_in(
     state: StateExtension,
     extract::Json(payload): extract::Json<LogUser>,
 ) -> Result<(StatusCode, Json<Value>), StatusCode> {
-    let user_data = payload;
+    let req_body = payload;
     let coll = database_coll::<User>(&state.db, USERS).await;
-    let filters = doc! {"username": &user_data.username};
+    let filters = doc! {"username": &req_body.username};
 
     let cursor = match coll.find_one(filters, None).await {
         Ok(res) => res,
@@ -140,7 +140,7 @@ pub async fn log_in(
         return Err(StatusCode::NOT_FOUND);
     };
 
-    let authenticated = match compare(&user_data.password, &user_stored.password).await {
+    let authenticated = match compare(&req_body.password, &user_stored.password).await {
         Ok(res) => res,
         Err(e) => {
             error!("Error: {:?}", e);
@@ -155,7 +155,7 @@ pub async fn log_in(
             None
         };
 
-        match create_jwt(user_data.username, user_stored.user_id, email).await {
+        match create_jwt(req_body.username, user_stored.user_id, email).await {
             Ok(token) => Ok((
                 StatusCode::OK,
                 Json(json!(doc! {"response": "Login Successful", "token": token})),

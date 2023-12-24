@@ -13,18 +13,16 @@ if &shortmess =~ 'A'
 else
   set shortmess=aoO
 endif
-badd +224 src/handlers/notes.rs
-badd +3 src/db/connect.rs
-badd +27 src/main.rs
-badd +94 src/handlers/users.rs
-badd +3 src/utils/get_token.rs
-badd +1 src/handlers.rs
-badd +2 .gitignore
+badd +192 src/handlers/notes.rs
+badd +34 src/db/connect.rs
+badd +31 src/main.rs
+badd +171 src/handlers/users.rs
+badd +10 src/utils/get_token.rs
 argglobal
 %argdel
-edit src/main.rs
+edit src/handlers/notes.rs
 argglobal
-balt src/db/connect.rs
+balt src/main.rs
 setlocal fdm=manual
 setlocal fde=0
 setlocal fmr={{{,}}}
@@ -35,12 +33,12 @@ setlocal fdn=20
 setlocal fen
 silent! normal! zE
 let &fdl = &fdl
-let s:l = 51 - ((29 * winheight(0) + 19) / 38)
+let s:l = 169 - ((7 * winheight(0) + 19) / 38)
 if s:l < 1 | let s:l = 1 | endif
 keepjumps exe s:l
 normal! zt
-keepjumps 51
-normal! 022|
+keepjumps 169
+normal! 026|
 tabnext 1
 if exists('s:wipebuf') && len(win_findbuf(s:wipebuf)) == 0 && getbufvar(s:wipebuf, '&buftype') isnot# 'terminal'
   silent exe 'bwipe ' . s:wipebuf
