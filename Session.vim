@@ -13,11 +13,10 @@ if &shortmess =~ 'A'
 else
   set shortmess=aoO
 endif
-badd +192 src/handlers/notes.rs
-badd +34 src/db/connect.rs
-badd +31 src/main.rs
-badd +171 src/handlers/users.rs
-badd +10 src/utils/get_token.rs
+badd +310 src/handlers/notes.rs
+badd +27 src/main.rs
+badd +137 src/handlers/users.rs
+badd +25 src/utils/check_integrity.rs
 argglobal
 %argdel
 edit src/handlers/notes.rs
@@ -33,12 +32,12 @@ setlocal fdn=20
 setlocal fen
 silent! normal! zE
 let &fdl = &fdl
-let s:l = 169 - ((7 * winheight(0) + 19) / 38)
+let s:l = 310 - ((32 * winheight(0) + 19) / 38)
 if s:l < 1 | let s:l = 1 | endif
 keepjumps exe s:l
 normal! zt
-keepjumps 169
-normal! 026|
+keepjumps 310
+normal! 05|
 tabnext 1
 if exists('s:wipebuf') && len(win_findbuf(s:wipebuf)) == 0 && getbufvar(s:wipebuf, '&buftype') isnot# 'terminal'
   silent exe 'bwipe ' . s:wipebuf

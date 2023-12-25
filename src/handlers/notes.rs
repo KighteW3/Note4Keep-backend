@@ -307,5 +307,34 @@ pub async fn delete_note(
         }
     };
 
-    Ok((StatusCode::OK, Json(json!(doc! {"addadaw": "awdada"}))))
+    let filters = doc! {"note_id": &req.note_id, "user": &claims.claims.userid};
+
+    let to_delete = match coll.find_one(filters, None).await {
+        Ok(res) => match res {
+            Some(result) => result,
+            None => return Err(StatusCode::NOT_FOUND),
+        },
+        Err(e) => {
+            error!("Error: {:?}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    let filters2 = doc! {"note_id": to_delete.note_id, "user": &claims.claims.userid};
+
+    let deleted: bool = match coll.delete_one(filters2, None).await {
+        Ok(_) => true,
+        Err(e) => {
+            error!("Error: {:?}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    match deleted {
+        true => Ok((
+            StatusCode::OK,
+            Json(json!(doc! {"response": "Succesfully deleted"})),
+        )),
+        false => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
 }

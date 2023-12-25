@@ -6,7 +6,7 @@ use dotenv::dotenv;
 use crate::db::connect::connect_db;
 use crate::db::connect::DbState;
 use crate::handlers::{
-    notes::{create_note, get_notes, some_note, spec_note},
+    notes::{create_note, delete_note, get_notes, some_note, spec_note},
     users::{create_user, list_users, log_in},
 };
 use crate::utils::check_integrity::check_integrity;
@@ -38,6 +38,7 @@ async fn main() {
         .route("/api/notes/create-note", post(create_note))
         .route("/api/notes/some-note", post(some_note))
         .route("/api/notes/spec-note", post(spec_note))
+        .route("/api/notes/delete-note", post(delete_note))
         .layer(Extension(db_state));
 
     let mut bind_to = String::new();
