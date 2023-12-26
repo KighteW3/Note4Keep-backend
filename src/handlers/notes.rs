@@ -10,7 +10,7 @@ use mongodb::{
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-use crate::utils::{get_token::get_token, random_id::random_id};
+use crate::utils::{get_token::get_token, mongo_health, random_id::random_id};
 use crate::{
     auth::jwt::compare_jwt,
     db::{
@@ -35,6 +35,11 @@ pub struct SomeNote {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SpecificNote {
     note_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DeleteNotes {
+    notes_id: Vec<String>,
 }
 
 #[debug_handler]
@@ -209,6 +214,11 @@ pub async fn some_note(
         options: String::new(),
     };
 
+    match mongo_health::mongo_query_error(req.note_phrase) {
+        true => return Err(StatusCode::BAD_REQUEST),
+        _ => {}
+    };
+
     let filters = doc! {"title": formated, "user": &claims.claims.userid};
 
     let note = match coll.find(filters, None).await {
@@ -233,6 +243,7 @@ pub async fn some_note(
         }
         Err(e) => {
             error!("Error: {:?}", e);
+            println!("Me gustan las patatas");
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -285,7 +296,7 @@ pub async fn spec_note(
 }
 
 #[debug_handler]
-pub async fn delete_note(
+pub async fn delete_spec_note(
     state: StateExtension,
     headers: HeaderMap,
     extract::Json(payload): extract::Json<SpecificNote>,
@@ -336,5 +347,85 @@ pub async fn delete_note(
             Json(json!(doc! {"response": "Succesfully deleted"})),
         )),
         false => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+#[debug_handler]
+pub async fn delete_notes(
+    status: StateExtension,
+    headers: HeaderMap,
+    extract::Json(payload): extract::Json<DeleteNotes>,
+) -> Result<(StatusCode, Json<Value>), StatusCode> {
+    let headers = headers;
+    let req = payload;
+    let coll = database_coll::<Notes>(&status.db, NOTES).await;
+
+    let token = match get_token(&headers) {
+        Ok(res) => res,
+        Err(e) => return Err(e),
+    };
+
+    let claims = match compare_jwt(&token).await {
+        Ok(res) => res,
+        Err(e) => {
+            error!("Error: {:?}", e);
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+    };
+
+    let mut to_delete: Vec<String> = Vec::new();
+    let mut errored: Vec<String> = Vec::new();
+
+    for note in req.notes_id {
+        let filter = doc! {"note_id": &note, "user": &claims.claims.userid};
+
+        match coll.find_one(filter, None).await {
+            Ok(res) => match res {
+                Some(result) => to_delete.push(result.note_id),
+                _ => {
+                    errored.push(note);
+                    continue;
+                }
+            },
+            Err(e) => {
+                println!("Error: {:?}", e);
+                continue;
+            }
+        };
+    }
+
+    let mut deleted = Vec::new();
+    let mut not_deleted = Vec::new();
+
+    for delete in to_delete {
+        let filter = doc! {"note_id": &delete, "user": &claims.claims.userid};
+
+        match coll.delete_one(filter, None).await {
+            Ok(_) => deleted.push(delete),
+            Err(_) => not_deleted.push(delete),
+        }
+    }
+
+    match deleted.len() {
+        0 => return Err(StatusCode::NOT_FOUND),
+        _ => match not_deleted.len() {
+            0 => {
+                return Ok((
+                    StatusCode::OK,
+                    Json(json!(
+                        doc! {"response": "All notes were succesfully deleted"}
+                    )),
+                ))
+            }
+
+            _ => {
+                return Ok((
+                    StatusCode::OK,
+                    Json(json!(
+                        doc! {"response": format!("{:?} notes deleted and {:?} cannot be deleted", deleted.len(), not_deleted.len())}
+                    )),
+                ))
+            }
+        },
     }
 }

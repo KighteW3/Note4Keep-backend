@@ -13,10 +13,12 @@ if &shortmess =~ 'A'
 else
   set shortmess=aoO
 endif
-badd +310 src/handlers/notes.rs
-badd +27 src/main.rs
+badd +213 src/handlers/notes.rs
+badd +43 src/main.rs
 badd +137 src/handlers/users.rs
 badd +25 src/utils/check_integrity.rs
+badd +23 src/utils/get_token.rs
+badd +7 src/utils/mongo_health.rs
 argglobal
 %argdel
 edit src/handlers/notes.rs
@@ -32,11 +34,11 @@ setlocal fdn=20
 setlocal fen
 silent! normal! zE
 let &fdl = &fdl
-let s:l = 310 - ((32 * winheight(0) + 19) / 38)
+let s:l = 213 - ((18 * winheight(0) + 19) / 38)
 if s:l < 1 | let s:l = 1 | endif
 keepjumps exe s:l
 normal! zt
-keepjumps 310
+keepjumps 213
 normal! 05|
 tabnext 1
 if exists('s:wipebuf') && len(win_findbuf(s:wipebuf)) == 0 && getbufvar(s:wipebuf, '&buftype') isnot# 'terminal'

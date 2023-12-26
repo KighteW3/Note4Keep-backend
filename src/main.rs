@@ -6,7 +6,7 @@ use dotenv::dotenv;
 use crate::db::connect::connect_db;
 use crate::db::connect::DbState;
 use crate::handlers::{
-    notes::{create_note, delete_note, get_notes, some_note, spec_note},
+    notes::{create_note, delete_notes, delete_spec_note, get_notes, some_note, spec_note},
     users::{create_user, list_users, log_in},
 };
 use crate::utils::check_integrity::check_integrity;
@@ -38,7 +38,8 @@ async fn main() {
         .route("/api/notes/create-note", post(create_note))
         .route("/api/notes/some-note", post(some_note))
         .route("/api/notes/spec-note", post(spec_note))
-        .route("/api/notes/delete-note", post(delete_note))
+        .route("/api/notes/delete-spec-note", post(delete_spec_note))
+        .route("/api/notes/delete-notes", post(delete_notes))
         .layer(Extension(db_state));
 
     let mut bind_to = String::new();
@@ -57,8 +58,6 @@ async fn main() {
 
     println!("The server is open on {}:{}", ip, port);
 
-    axum::Server::bind(&bind_to.parse().unwrap())
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
+    let listener = tokio::net::TcpListener::bind(bind_to).await.unwrap();
+    axum::serve(listener, app).await.unwrap();
 }
