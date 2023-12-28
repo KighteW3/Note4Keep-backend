@@ -10,7 +10,7 @@ use mongodb::{
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-use crate::utils::{get_token::get_token, mongo_health, random_id::random_id};
+use crate::utils::{get_token::get_token, mongo_health::mongo_query_error, random_id::random_id};
 use crate::{
     auth::jwt::compare_jwt,
     db::{
@@ -70,36 +70,19 @@ pub async fn get_notes(
 ) -> Result<(StatusCode, Json<Value>), StatusCode> {
     let coll = database_coll::<Notes>(&state.db, NOTES).await;
 
-    let auth_raw = if let Some(headers) = headers.get("Authorization") {
-        headers
-    } else {
-        return Err(StatusCode::BAD_REQUEST);
-    };
-
-    let auth = match auth_raw.to_str() {
+    let token = match get_token(&headers) {
         Ok(res) => res,
-        Err(e) => {
-            error!("Error: {:?}", e);
-            return Err(StatusCode::INTERNAL_SERVER_ERROR);
-        }
+        Err(e) => return Err(e),
     };
 
-    let bearer = auth.to_lowercase().starts_with("bearer");
-
-    if !bearer {
-        return Err(StatusCode::BAD_REQUEST);
-    }
-
-    let token_raw: String = auth.chars().skip(7).collect();
-
-    let token = token_raw.trim().to_string();
-
-    match compare_jwt(&token).await {
+    let claims = match compare_jwt(&token).await {
+        Ok(res) => res,
         Err(_) => return Err(StatusCode::UNAUTHORIZED),
-        Ok(_) => {}
     };
 
-    let notes = match coll.find(None, None).await {
+    let filter = doc! {"user": &claims.claims.userid};
+
+    let notes = match coll.find(filter, None).await {
         Ok(mut cursor) => {
             let mut notes = Vec::new();
 
@@ -188,6 +171,11 @@ pub async fn some_note(
     let req = payload;
     let coll = database_coll::<Notes>(&state.db, NOTES).await;
 
+    match mongo_query_error(&req.note_phrase) {
+        false => {}
+        true => return Err(StatusCode::BAD_REQUEST),
+    };
+
     if req.note_phrase.len() < 1 {
         return Err(StatusCode::BAD_REQUEST);
     }
@@ -212,11 +200,6 @@ pub async fn some_note(
     let formated = mongodb::bson::Regex {
         pattern: passphrase,
         options: String::new(),
-    };
-
-    match mongo_health::mongo_query_error(req.note_phrase) {
-        true => return Err(StatusCode::BAD_REQUEST),
-        _ => {}
     };
 
     let filters = doc! {"title": formated, "user": &claims.claims.userid};
