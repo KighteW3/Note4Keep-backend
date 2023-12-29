@@ -13,7 +13,7 @@ pub struct User {
 pub struct Notes {
     pub note_id: String,
     pub title: String,
-    pub priority: u8,
+    pub priority: u32,
     pub text: String,
     pub user: String,
     pub date: mongodb::bson::DateTime,

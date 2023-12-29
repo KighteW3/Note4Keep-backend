@@ -1,4 +1,4 @@
-use axum::{extract, Json};
+use axum::Json;
 use axum_macros::debug_handler;
 use futures::TryStreamExt;
 use hyper::{HeaderMap, StatusCode};
@@ -23,7 +23,7 @@ use crate::{
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateNote {
     title: String,
-    priority: u8,
+    priority: u32,
     text: String,
 }
 
@@ -40,6 +40,14 @@ pub struct SpecificNote {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DeleteNotes {
     notes_id: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateNote {
+    note_id: String,
+    title: String,
+    priority: u32,
+    text: String,
 }
 
 #[debug_handler]
@@ -109,9 +117,8 @@ pub async fn get_notes(
 pub async fn create_note(
     state: StateExtension,
     headers: HeaderMap,
-    extract::Json(payload): extract::Json<CreateNote>,
+    Json(req): Json<CreateNote>,
 ) -> Result<(StatusCode, Json<Value>), StatusCode> {
-    let req = payload;
     let coll = database_coll::<Notes>(&state.db, NOTES).await;
 
     let token = match get_token(&headers) {
@@ -165,10 +172,8 @@ pub async fn create_note(
 pub async fn some_note(
     state: StateExtension,
     headers: HeaderMap,
-    extract::Json(payload): extract::Json<SomeNote>,
+    Json(req): Json<SomeNote>,
 ) -> Result<(StatusCode, Json<Value>), StatusCode> {
-    let headers = headers;
-    let req = payload;
     let coll = database_coll::<Notes>(&state.db, NOTES).await;
 
     match mongo_query_error(&req.note_phrase) {
@@ -238,10 +243,8 @@ pub async fn some_note(
 pub async fn spec_note(
     state: StateExtension,
     headers: HeaderMap,
-    extract::Json(payload): extract::Json<SpecificNote>,
+    Json(req): Json<SpecificNote>,
 ) -> Result<(StatusCode, Json<Value>), StatusCode> {
-    let headers = headers;
-    let req = payload;
     let coll = database_coll::<Notes>(&state.db, NOTES).await;
 
     let token = match get_token(&headers) {
@@ -282,10 +285,8 @@ pub async fn spec_note(
 pub async fn delete_spec_note(
     state: StateExtension,
     headers: HeaderMap,
-    extract::Json(payload): extract::Json<SpecificNote>,
+    Json(req): Json<SpecificNote>,
 ) -> Result<(StatusCode, Json<Value>), StatusCode> {
-    let headers = headers;
-    let req = payload;
     let coll = database_coll::<Notes>(&state.db, NOTES).await;
 
     let token = match get_token(&headers) {
@@ -303,9 +304,9 @@ pub async fn delete_spec_note(
 
     let filters = doc! {"note_id": &req.note_id, "user": &claims.claims.userid};
 
-    let to_delete = match coll.find_one(filters, None).await {
+    match coll.find_one(filters.clone(), None).await {
         Ok(res) => match res {
-            Some(result) => result,
+            Some(_) => {}
             None => return Err(StatusCode::NOT_FOUND),
         },
         Err(e) => {
@@ -314,9 +315,7 @@ pub async fn delete_spec_note(
         }
     };
 
-    let filters2 = doc! {"note_id": to_delete.note_id, "user": &claims.claims.userid};
-
-    let deleted: bool = match coll.delete_one(filters2, None).await {
+    let deleted: bool = match coll.delete_one(filters, None).await {
         Ok(_) => true,
         Err(e) => {
             error!("Error: {:?}", e);
@@ -337,10 +336,8 @@ pub async fn delete_spec_note(
 pub async fn delete_notes(
     status: StateExtension,
     headers: HeaderMap,
-    extract::Json(payload): extract::Json<DeleteNotes>,
+    Json(req): Json<DeleteNotes>,
 ) -> Result<(StatusCode, Json<Value>), StatusCode> {
-    let headers = headers;
-    let req = payload;
     let coll = database_coll::<Notes>(&status.db, NOTES).await;
 
     let token = match get_token(&headers) {
@@ -410,5 +407,88 @@ pub async fn delete_notes(
                 ))
             }
         },
+    }
+}
+
+#[debug_handler]
+pub async fn delete_all_notes(
+    state: StateExtension,
+    headers: HeaderMap,
+) -> Result<(StatusCode, Json<Value>), StatusCode> {
+    let coll = database_coll::<Notes>(&state.db, NOTES).await;
+
+    let token = match get_token(&headers) {
+        Ok(res) => res,
+        Err(e) => return Err(e),
+    };
+
+    let claims = match compare_jwt(&token).await {
+        Ok(res) => res,
+        Err(e) => {
+            error!("Error: {:?}", e);
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+    };
+
+    let filters = doc! {"user": &claims.claims.userid};
+
+    match coll.delete_many(filters, None).await {
+        Ok(_) => {
+            return Ok((
+                StatusCode::OK,
+                Json(json!(doc! {"response": "ALl notes deleted succesfully"})),
+            ))
+        }
+        Err(e) => {
+            error!("Error: {:?}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+}
+
+#[debug_handler]
+pub async fn update_note(
+    state: StateExtension,
+    headers: HeaderMap,
+    Json(req): Json<UpdateNote>,
+) -> Result<(StatusCode, Json<Value>), StatusCode> {
+    let coll = database_coll::<Notes>(&state.db, NOTES).await;
+
+    let token = match get_token(&headers) {
+        Ok(res) => res,
+        Err(e) => return Err(e),
+    };
+
+    let claims = match compare_jwt(&token).await {
+        Ok(res) => res,
+        Err(e) => {
+            error!("Error: {:?}", e);
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+    };
+
+    let filters = doc! {"note_id": &req.note_id, "user": &claims.claims.userid};
+    let mods = doc! {"$set": {"title": &req.title, "priority": &req.priority, "text": &req.text}};
+
+    match coll.find_one(filters.clone(), None).await {
+        Ok(res) => match res {
+            None => return Err(StatusCode::NOT_FOUND),
+            _ => {}
+        },
+        Err(e) => {
+            error!("Error: {:?}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    match coll.update_one(filters, mods, None).await {
+        Ok(_) => Ok((
+            StatusCode::OK,
+            Json(json!(doc! {"response": "Note updated succesfully"})),
+        )),
+        Err(e) => {
+            error!("Error: {:?}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
     }
 }

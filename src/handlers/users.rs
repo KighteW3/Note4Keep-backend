@@ -1,4 +1,4 @@
-use axum::{extract, Json};
+use axum::Json;
 use axum_macros::debug_handler;
 use futures::TryStreamExt;
 use hyper::StatusCode;
@@ -55,11 +55,10 @@ pub async fn list_users(state: StateExtension) -> Result<(StatusCode, Json<Value
 #[debug_handler]
 pub async fn create_user(
     state: StateExtension,
-    extract::Json(payload): extract::Json<CreateUser>,
+    Json(req): Json<CreateUser>,
 ) -> Result<(StatusCode, Json<Value>), StatusCode> {
-    let req_body = payload;
     let coll = database_coll::<User>(&state.db, USERS).await;
-    let filters = doc! {"username": &req_body.username};
+    let filters = doc! {"username": &req.username};
 
     let cursor = match coll.find_one(filters, None).await {
         Ok(cursor) => cursor,
@@ -74,7 +73,7 @@ pub async fn create_user(
         Some(_) => return Err(StatusCode::CONFLICT),
     }
 
-    let encoded_pass = match encrypt(&req_body.password).await {
+    let encoded_pass = match encrypt(&req.password).await {
         Ok(pass) => pass,
         Err(e) => {
             error!("Error: {:?}", e);
@@ -84,7 +83,7 @@ pub async fn create_user(
 
     let userid = random_id();
 
-    let email = if let Some(email) = req_body.email {
+    let email = if let Some(email) = req.email {
         Some(email)
     } else {
         None
@@ -92,14 +91,14 @@ pub async fn create_user(
 
     let data = User {
         user_id: userid.clone(),
-        username: req_body.username.clone(),
+        username: req.username.clone(),
         password: encoded_pass,
         email: email.clone(),
         ip: None,
     };
 
     match coll.insert_one(data, None).await {
-        Ok(_) => match create_jwt(req_body.username, userid, email).await {
+        Ok(_) => match create_jwt(req.username, userid, email).await {
             Ok(token) => Ok((
                 StatusCode::OK,
                 Json(json!(doc! {"response": "User Created", "token": token})),
@@ -120,11 +119,10 @@ pub async fn create_user(
 #[debug_handler]
 pub async fn log_in(
     state: StateExtension,
-    extract::Json(payload): extract::Json<LogUser>,
+    Json(req): Json<LogUser>,
 ) -> Result<(StatusCode, Json<Value>), StatusCode> {
-    let req_body = payload;
     let coll = database_coll::<User>(&state.db, USERS).await;
-    let filters = doc! {"username": &req_body.username};
+    let filters = doc! {"username": &req.username};
 
     let cursor = match coll.find_one(filters, None).await {
         Ok(res) => res,
@@ -140,7 +138,7 @@ pub async fn log_in(
         return Err(StatusCode::NOT_FOUND);
     };
 
-    let authenticated = match compare(&req_body.password, &user_stored.password).await {
+    let authenticated = match compare(&req.password, &user_stored.password).await {
         Ok(res) => res,
         Err(e) => {
             error!("Error: {:?}", e);
@@ -155,7 +153,7 @@ pub async fn log_in(
             None
         };
 
-        match create_jwt(req_body.username, user_stored.user_id, email).await {
+        match create_jwt(req.username, user_stored.user_id, email).await {
             Ok(token) => Ok((
                 StatusCode::OK,
                 Json(json!(doc! {"response": "Login Successful", "token": token})),

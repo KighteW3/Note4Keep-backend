@@ -13,16 +13,16 @@ if &shortmess =~ 'A'
 else
   set shortmess=aoO
 endif
-badd +73 src/handlers/notes.rs
-badd +45 src/main.rs
+badd +433 src/handlers/notes.rs
+badd +50 src/main.rs
 badd +25 src/utils/check_integrity.rs
 badd +3 src/utils/mongo_health.rs
-badd +1 src/utils/get_token.rs
+badd +82 src/handlers/users.rs
 argglobal
 %argdel
 edit src/handlers/notes.rs
 argglobal
-balt src/utils/get_token.rs
+balt src/main.rs
 setlocal fdm=manual
 setlocal fde=0
 setlocal fmr={{{,}}}
@@ -33,12 +33,12 @@ setlocal fdn=20
 setlocal fen
 silent! normal! zE
 let &fdl = &fdl
-let s:l = 73 - ((4 * winheight(0) + 19) / 38)
+let s:l = 433 - ((29 * winheight(0) + 19) / 38)
 if s:l < 1 | let s:l = 1 | endif
 keepjumps exe s:l
 normal! zt
-keepjumps 73
-normal! 0
+keepjumps 433
+normal! 020|
 tabnext 1
 if exists('s:wipebuf') && len(win_findbuf(s:wipebuf)) == 0 && getbufvar(s:wipebuf, '&buftype') isnot# 'terminal'
   silent exe 'bwipe ' . s:wipebuf
@@ -52,7 +52,6 @@ if filereadable(s:sx)
 endif
 let &g:so = s:so_save | let &g:siso = s:siso_save
 set hlsearch
-nohlsearch
 doautoall SessionLoadPost
 unlet SessionLoad
 " vim: set ft=vim :
