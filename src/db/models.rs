@@ -1,3 +1,5 @@
+use bson::serde_helpers::{bson_datetime_as_rfc3339_string, chrono_datetime_as_bson_datetime};
+use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -16,5 +18,6 @@ pub struct Notes {
     pub priority: u32,
     pub text: String,
     pub user: String,
-    pub date: mongodb::bson::DateTime,
+    #[serde(with = "chrono_datetime_as_bson_datetime")]
+    pub date: DateTime<Utc>,
 }

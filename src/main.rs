@@ -14,7 +14,7 @@ use crate::handlers::{
         create_note, delete_all_notes, delete_notes, delete_spec_note, get_notes, some_note,
         spec_note, update_note,
     },
-    users::{create_user, list_users, log_in},
+    users::{create_user, list_users, log_in, user_check},
 };
 use crate::utils::check_integrity::check_integrity;
 
@@ -38,8 +38,9 @@ async fn main() {
     });
 
     let app = Router::new()
-        .route("/api/users", post(list_users))
-        .route("/api/notes", get(get_notes))
+        .route("/api/users", get(list_users))
+        .route("/api/users/check", post(user_check))
+        .route("/api/notes", post(get_notes))
         .route("/api/users/create-user", post(create_user))
         .route("/api/users/login", post(log_in))
         .route("/api/notes/create-note", post(create_note))

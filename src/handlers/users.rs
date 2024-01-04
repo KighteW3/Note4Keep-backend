@@ -1,18 +1,21 @@
 use axum::Json;
 use axum_macros::debug_handler;
 use futures::TryStreamExt;
-use hyper::StatusCode;
+use hyper::{HeaderMap, StatusCode};
 use log::error;
-use mongodb::{bson::doc, options::FindOptions};
+use mongodb::{
+    bson::doc,
+    options::{FindOneOptions, FindOptions},
+};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 use crate::auth::{
     bcrypt::{compare, encrypt},
-    jwt::create_jwt,
+    jwt::{compare_jwt, create_jwt},
 };
 use crate::db::connect::USERS;
-use crate::utils::random_id::random_id;
+use crate::utils::{get_token::get_token, random_id::random_id};
 use crate::{
     db::{connect::database_coll, models::User},
     StateExtension,
@@ -50,6 +53,48 @@ pub async fn list_users(state: StateExtension) -> Result<(StatusCode, Json<Value
     }
 
     Ok((StatusCode::OK, Json(json!(result))))
+}
+
+#[debug_handler]
+pub async fn user_check(
+    state: StateExtension,
+    headers: HeaderMap,
+) -> Result<(StatusCode, Json<Value>), StatusCode> {
+    let coll = database_coll::<User>(&state.db, USERS).await;
+
+    let token = match get_token(&headers) {
+        Ok(res) => res,
+        Err(e) => return Err(e),
+    };
+
+    let claims = match compare_jwt(&token).await {
+        Ok(res) => res,
+        Err(e) => {
+            error!("Error: {:?}", e);
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+    };
+
+    let filters = doc! {"user_id": &claims.claims.userid};
+
+    // This piece of shit dont work for no reason. :(
+    // let opts = FindOneOptions::builder()
+    //     .projection(doc! { "user_id": 0, "password": 0, "ip": 0 })
+    //     .build();
+
+    match coll.find_one(filters, None).await {
+        Ok(res) => match res {
+            Some(user) => {
+                let data = doc! {"username": user.username, "email": user.email};
+                Ok((StatusCode::OK, Json(json!(data))))
+            }
+            None => Err(StatusCode::NOT_FOUND),
+        },
+        Err(e) => {
+            error!("Error: {:?}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 #[debug_handler]

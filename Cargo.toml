@@ -24,3 +24,4 @@ jsonwebtoken = "9.2.0"
 rand = "0.8.5"
 regex = "1.10.2"
 log = "0.4.20"
+bson = { version = "2.8.1", features = ["default", "chrono-0_4"]}

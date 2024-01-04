@@ -3,10 +3,7 @@ use axum_macros::debug_handler;
 use futures::TryStreamExt;
 use hyper::{HeaderMap, StatusCode};
 use log::error;
-use mongodb::{
-    bson::{doc, DateTime},
-    options::FindOptions,
-};
+use mongodb::{bson::doc, options::FindOptions};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
@@ -19,6 +16,17 @@ use crate::{
     },
     StateExtension,
 };
+use chrono::prelude::*;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NotesOutgoing {
+    pub note_id: String,
+    pub title: String,
+    pub priority: u32,
+    pub text: String,
+    pub user: String,
+    pub date: String,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateNote {
@@ -89,13 +97,23 @@ pub async fn get_notes(
     };
 
     let filter = doc! {"user": &claims.claims.userid};
+    let opts = FindOptions::builder().sort(doc! {"date": - 1}).build();
 
-    let notes = match coll.find(filter, None).await {
+    let notes = match coll.find(filter, opts).await {
         Ok(mut cursor) => {
             let mut notes = Vec::new();
 
-            while let Some(not) = cursor.try_next().await.unwrap() {
-                notes.push(not)
+            while let Some(note) = cursor.try_next().await.unwrap() {
+                // This thing right down here is a mess, i'll fix it in a future.
+                let note = NotesOutgoing {
+                    note_id: note.note_id,
+                    title: note.title,
+                    priority: note.priority,
+                    text: note.text,
+                    user: note.user,
+                    date: note.date.to_rfc3339(),
+                };
+                notes.push(note)
             }
 
             notes
@@ -140,7 +158,7 @@ pub async fn create_note(
         priority: req.priority,
         text: req.text,
         user: claims.claims.userid,
-        date: DateTime::now(),
+        date: Utc::now(),
     };
 
     match coll.find_one(doc! {"note_id": &data.note_id}, None).await {
@@ -157,15 +175,17 @@ pub async fn create_note(
     };
 
     match coll.insert_one(data, None).await {
-        Ok(_ins) => Ok((
-            StatusCode::OK,
-            Json(json!(doc! {"Response": "Note created succesfully"})),
-        )),
+        Ok(_) => {}
         Err(e) => {
             error!("Error: {:?}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     }
+
+    Ok((
+        StatusCode::OK,
+        Json(json!(doc! {"Response": "Note created succesfully"})),
+    ))
 }
 
 #[debug_handler]
@@ -208,8 +228,9 @@ pub async fn some_note(
     };
 
     let filters = doc! {"title": formated, "user": &claims.claims.userid};
+    let opts = FindOptions::builder().sort(doc! {"date": -1}).build();
 
-    let note = match coll.find(filters, None).await {
+    let note = match coll.find(filters, opts).await {
         Ok(mut res) => {
             let mut all_results = Vec::new();
 
