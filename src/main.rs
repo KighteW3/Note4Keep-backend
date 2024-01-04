@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use axum::{
     extract::Extension,
+    http::Method,
     routing::{delete, get, patch, post},
     Router,
 };
@@ -17,6 +18,8 @@ use crate::handlers::{
     users::{create_user, list_users, log_in, user_check},
 };
 use crate::utils::check_integrity::check_integrity;
+use tower::ServiceBuilder;
+use tower_http::cors::{Any, CorsLayer};
 
 use std::env;
 
@@ -37,6 +40,11 @@ async fn main() {
         db: connect_db().await,
     });
 
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
     let app = Router::new()
         .route("/api/users", get(list_users))
         .route("/api/users/check", post(user_check))
@@ -50,7 +58,7 @@ async fn main() {
         .route("/api/notes/delete-notes", delete(delete_notes))
         .route("/api/notes/delete-all-notes", delete(delete_all_notes))
         .route("/api/notes/update-note", patch(update_note))
-        .layer(Extension(db_state));
+        .layer(ServiceBuilder::new().layer(Extension(db_state)).layer(cors));
 
     let mut bind_to = String::new();
 

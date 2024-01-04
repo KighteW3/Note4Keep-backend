@@ -244,10 +244,6 @@ pub async fn some_note(
                 all_results.push(note)
             }
 
-            if all_results.len() < 1 {
-                return Err(StatusCode::NO_CONTENT);
-            }
-
             all_results
         }
         Err(e) => {
@@ -256,6 +252,10 @@ pub async fn some_note(
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
+
+    if note.len() < 1 {
+        return Err(StatusCode::NO_CONTENT);
+    }
 
     Ok((StatusCode::OK, Json(json!(note))))
 }
