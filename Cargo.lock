@@ -1140,7 +1140,6 @@ dependencies = [
  "futures",
  "hyper",
  "jsonwebtoken",
- "log",
  "mongodb",
  "once_cell",
  "rand",

@@ -2,7 +2,6 @@ use axum::Json;
 use axum_macros::debug_handler;
 use futures::TryStreamExt;
 use hyper::{HeaderMap, StatusCode};
-use log::error;
 use mongodb::{bson::doc, options::FindOptions};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -119,7 +118,7 @@ pub async fn get_notes(
             notes
         }
         Err(e) => {
-            error!("Error: {:?}", e);
+            println!("Error: {:?}", e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -169,7 +168,7 @@ pub async fn create_note(
             None => {}
         },
         Err(e) => {
-            error!("Error: {:?}", e);
+            println!("Error: {:?}", e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -177,7 +176,7 @@ pub async fn create_note(
     match coll.insert_one(data, None).await {
         Ok(_) => {}
         Err(e) => {
-            error!("Error: {:?}", e);
+            println!("Error: {:?}", e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     }
@@ -213,7 +212,7 @@ pub async fn some_note(
     let claims = match compare_jwt(&token).await {
         Ok(res) => res,
         Err(e) => {
-            error!("Error: {:?}", e);
+            println!("Error: {:?}", e);
             return Err(StatusCode::UNAUTHORIZED);
         }
     };
@@ -237,7 +236,7 @@ pub async fn some_note(
             while let Some(note) = match res.try_next().await {
                 Ok(res) => res,
                 Err(e) => {
-                    error!("Error: {:?}", e);
+                    println!("Error: {:?}", e);
                     return Err(StatusCode::INTERNAL_SERVER_ERROR);
                 }
             } {
@@ -247,7 +246,7 @@ pub async fn some_note(
             all_results
         }
         Err(e) => {
-            error!("Error: {:?}", e);
+            println!("Error: {:?}", e);
             println!("Me gustan las patatas");
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
@@ -276,7 +275,7 @@ pub async fn spec_note(
     let claims = match compare_jwt(&token).await {
         Ok(res) => res,
         Err(e) => {
-            error!("Error: {:?}", e);
+            println!("Error: {:?}", e);
             return Err(StatusCode::UNAUTHORIZED);
         }
     };
@@ -294,7 +293,7 @@ pub async fn spec_note(
             note
         }
         Err(e) => {
-            error!("Error: {:?}", e);
+            println!("Error: {:?}", e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -318,7 +317,7 @@ pub async fn delete_spec_note(
     let claims = match compare_jwt(&token).await {
         Ok(res) => res,
         Err(e) => {
-            error!("Error: {:?}", e);
+            println!("Error: {:?}", e);
             return Err(StatusCode::UNAUTHORIZED);
         }
     };
@@ -331,7 +330,7 @@ pub async fn delete_spec_note(
             None => return Err(StatusCode::NOT_FOUND),
         },
         Err(e) => {
-            error!("Error: {:?}", e);
+            println!("Error: {:?}", e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -339,7 +338,7 @@ pub async fn delete_spec_note(
     let deleted: bool = match coll.delete_one(filters, None).await {
         Ok(_) => true,
         Err(e) => {
-            error!("Error: {:?}", e);
+            println!("Error: {:?}", e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -369,7 +368,7 @@ pub async fn delete_notes(
     let claims = match compare_jwt(&token).await {
         Ok(res) => res,
         Err(e) => {
-            error!("Error: {:?}", e);
+            println!("Error: {:?}", e);
             return Err(StatusCode::UNAUTHORIZED);
         }
     };
@@ -446,7 +445,7 @@ pub async fn delete_all_notes(
     let claims = match compare_jwt(&token).await {
         Ok(res) => res,
         Err(e) => {
-            error!("Error: {:?}", e);
+            println!("Error: {:?}", e);
             return Err(StatusCode::UNAUTHORIZED);
         }
     };
@@ -461,7 +460,7 @@ pub async fn delete_all_notes(
             ))
         }
         Err(e) => {
-            error!("Error: {:?}", e);
+            println!("Error: {:?}", e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -483,7 +482,7 @@ pub async fn update_note(
     let claims = match compare_jwt(&token).await {
         Ok(res) => res,
         Err(e) => {
-            error!("Error: {:?}", e);
+            println!("Error: {:?}", e);
             return Err(StatusCode::UNAUTHORIZED);
         }
     };
@@ -497,7 +496,7 @@ pub async fn update_note(
             _ => {}
         },
         Err(e) => {
-            error!("Error: {:?}", e);
+            println!("Error: {:?}", e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -508,7 +507,7 @@ pub async fn update_note(
             Json(json!(doc! {"response": "Note updated succesfully"})),
         )),
         Err(e) => {
-            error!("Error: {:?}", e);
+            println!("Error: {:?}", e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     }

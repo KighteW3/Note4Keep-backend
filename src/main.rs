@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use axum::{
     extract::Extension,
-    http::Method,
     routing::{delete, get, patch, post},
     Router,
 };

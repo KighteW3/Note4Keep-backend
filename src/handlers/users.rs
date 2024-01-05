@@ -2,7 +2,6 @@ use axum::Json;
 use axum_macros::debug_handler;
 use futures::TryStreamExt;
 use hyper::{HeaderMap, StatusCode};
-use log::error;
 use mongodb::{
     bson::doc,
     options::{FindOneOptions, FindOptions},
@@ -20,6 +19,12 @@ use crate::{
     db::{connect::database_coll, models::User},
     StateExtension,
 };
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CheckUser {
+    username: String,
+    email: String,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateUser {
@@ -60,7 +65,7 @@ pub async fn user_check(
     state: StateExtension,
     headers: HeaderMap,
 ) -> Result<(StatusCode, Json<Value>), StatusCode> {
-    let coll = database_coll::<User>(&state.db, USERS).await;
+    let coll = database_coll::<CheckUser>(&state.db, USERS).await;
 
     let token = match get_token(&headers) {
         Ok(res) => res,
@@ -70,28 +75,27 @@ pub async fn user_check(
     let claims = match compare_jwt(&token).await {
         Ok(res) => res,
         Err(e) => {
-            error!("Error: {:?}", e);
+            println!("Error: {:?}", e);
             return Err(StatusCode::UNAUTHORIZED);
         }
     };
 
     let filters = doc! {"user_id": &claims.claims.userid};
 
-    // This piece of shit dont work for no reason. :(
-    // let opts = FindOneOptions::builder()
-    //     .projection(doc! { "user_id": 0, "password": 0, "ip": 0 })
-    //     .build();
+    let opts = FindOneOptions::builder()
+        .projection(doc! { "username": 1, "email": 1 })
+        .build();
 
-    match coll.find_one(filters, None).await {
+    match coll.find_one(filters, opts).await {
         Ok(res) => match res {
             Some(user) => {
-                let data = doc! {"username": user.username, "email": user.email};
-                Ok((StatusCode::OK, Json(json!(data))))
+                //let data = doc! {"username": user.username, "email": user.email};
+                Ok((StatusCode::OK, Json(json!(user))))
             }
             None => Err(StatusCode::NOT_FOUND),
         },
         Err(e) => {
-            error!("Error: {:?}", e);
+            println!("Error: {:?}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
@@ -108,7 +112,7 @@ pub async fn create_user(
     let cursor = match coll.find_one(filters, None).await {
         Ok(cursor) => cursor,
         Err(e) => {
-            error!("Error: {:?}", e);
+            println!("Error: {:?}", e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -121,7 +125,7 @@ pub async fn create_user(
     let encoded_pass = match encrypt(&req.password).await {
         Ok(pass) => pass,
         Err(e) => {
-            error!("Error: {:?}", e);
+            println!("Error: {:?}", e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -149,13 +153,13 @@ pub async fn create_user(
                 Json(json!(doc! {"response": "User Created", "token": token})),
             )),
             Err(e) => {
-                error!("Error: {:?}", e);
+                println!("Error: {:?}", e);
 
                 Err(StatusCode::INTERNAL_SERVER_ERROR)
             }
         },
         Err(e) => {
-            error!("Error: {:?}", e);
+            println!("Error: {:?}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
@@ -172,7 +176,7 @@ pub async fn log_in(
     let cursor = match coll.find_one(filters, None).await {
         Ok(res) => res,
         Err(e) => {
-            error!("Error: {:?}", e);
+            println!("Error: {:?}", e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -186,7 +190,7 @@ pub async fn log_in(
     let authenticated = match compare(&req.password, &user_stored.password).await {
         Ok(res) => res,
         Err(e) => {
-            error!("Error: {:?}", e);
+            println!("Error: {:?}", e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -204,7 +208,7 @@ pub async fn log_in(
                 Json(json!(doc! {"response": "Login Successful", "token": token})),
             )),
             Err(e) => {
-                error!("Error: {:?}", e);
+                println!("Error: {:?}", e);
                 Err(StatusCode::INTERNAL_SERVER_ERROR)
             }
         }
