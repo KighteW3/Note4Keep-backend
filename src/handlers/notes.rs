@@ -103,7 +103,7 @@ pub async fn get_notes(
             let mut notes = Vec::new();
 
             while let Some(note) = cursor.try_next().await.unwrap() {
-                // This thing right down here is a mess, i'll fix it in a future.
+                // This thing right down here is a mess, i'll fix some day.
                 let note = NotesOutgoing {
                     note_id: note.note_id,
                     title: note.title,
@@ -488,7 +488,8 @@ pub async fn update_note(
     };
 
     let filters = doc! {"note_id": &req.note_id, "user": &claims.claims.userid};
-    let mods = doc! {"$set": {"title": &req.title, "priority": &req.priority, "text": &req.text}};
+    let mods = doc! {"$set": {"title": &req.title, "priority": &req.priority,
+    "text": &req.text}};
 
     match coll.find_one(filters.clone(), None).await {
         Ok(res) => match res {

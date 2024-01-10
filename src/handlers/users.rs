@@ -88,10 +88,7 @@ pub async fn user_check(
 
     match coll.find_one(filters, opts).await {
         Ok(res) => match res {
-            Some(user) => {
-                //let data = doc! {"username": user.username, "email": user.email};
-                Ok((StatusCode::OK, Json(json!(user))))
-            }
+            Some(user) => Ok((StatusCode::OK, Json(json!(user)))),
             None => Err(StatusCode::NOT_FOUND),
         },
         Err(e) => {
