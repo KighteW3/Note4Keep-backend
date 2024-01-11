@@ -23,7 +23,7 @@ use crate::{
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CheckUser {
     username: String,
-    email: String,
+    email: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
