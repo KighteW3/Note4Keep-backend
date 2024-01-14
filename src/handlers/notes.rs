@@ -410,7 +410,7 @@ pub async fn delete_notes(
         0 => return Err(StatusCode::NOT_FOUND),
         _ => match not_deleted.len() {
             0 => {
-                return Ok((
+                Ok((
                     StatusCode::OK,
                     Json(json!(
                         doc! {"response": "All notes were succesfully deleted"}
@@ -419,7 +419,7 @@ pub async fn delete_notes(
             }
 
             _ => {
-                return Ok((
+                Ok((
                     StatusCode::OK,
                     Json(json!(
                         doc! {"response": format!("{:?} notes deleted and {:?} cannot be deleted", deleted.len(), not_deleted.len())}
