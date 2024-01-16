@@ -1,11 +1,13 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use axum::{
+    error_handling::HandleErrorLayer,
     extract::Extension,
     routing::{delete, get, patch, post},
     Router,
 };
 use dotenv::dotenv;
+use hyper::StatusCode;
 
 use crate::db::connect::connect_db;
 use crate::db::connect::DbState;
@@ -17,7 +19,10 @@ use crate::handlers::{
     users::{create_user, list_users, log_in, user_check},
 };
 use crate::utils::check_integrity::check_integrity;
-use tower::ServiceBuilder;
+use tower::{
+    timeout::{error, Timeout, TimeoutLayer},
+    BoxError, ServiceBuilder,
+};
 use tower_http::cors::{Any, CorsLayer};
 
 use std::env;
@@ -28,6 +33,14 @@ pub mod handlers;
 pub mod utils;
 
 type StateExtension = axum::extract::Extension<Arc<DbState>>;
+
+pub async fn handle_timeout_error(err: BoxError) -> StatusCode {
+    if err.is::<error::Elapsed>() {
+        StatusCode::REQUEST_TIMEOUT
+    } else {
+        StatusCode::INTERNAL_SERVER_ERROR
+    }
+}
 
 #[tokio::main]
 async fn main() {
@@ -44,6 +57,10 @@ async fn main() {
         .allow_methods(Any)
         .allow_headers(Any);
 
+    let timeout_middleware = ServiceBuilder::new()
+        .layer(HandleErrorLayer::new(handle_timeout_error))
+        .layer(TimeoutLayer::new(Duration::from_secs(60)));
+
     let app = Router::new()
         .route("/api/users", get(list_users))
         .route("/api/users/check", post(user_check))
@@ -57,7 +74,12 @@ async fn main() {
         .route("/api/notes/delete-notes", delete(delete_notes))
         .route("/api/notes/delete-all-notes", delete(delete_all_notes))
         .route("/api/notes/update-note", patch(update_note))
-        .layer(ServiceBuilder::new().layer(Extension(db_state)).layer(cors));
+        .layer(
+            ServiceBuilder::new()
+                .layer(Extension(db_state))
+                .layer(timeout_middleware)
+                .layer(cors),
+        );
 
     let mut bind_to = String::new();
 
