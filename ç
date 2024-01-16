@@ -221,7 +221,7 @@ pub async fn some_note(
 
     let formated = mongodb::bson::Regex {
         pattern: passphrase,
-        options: String::from("i"),
+        options: String::new(),
     };
 
     let filters = doc! {"title": formated, "user": &claims.claims.userid};
@@ -238,13 +238,6 @@ pub async fn some_note(
                     return Err(StatusCode::INTERNAL_SERVER_ERROR);
                 }
             } {
-                let note = NotesOutgoing {
-                    note_id: note.note_id,
-                    title: note.title,
-                    priority: note.priority,
-                    text: note.text,
-                    date: note.date.to_rfc3339(),
-                };
                 all_results.push(note)
             }
 
@@ -290,13 +283,7 @@ pub async fn spec_note(
     let note = match coll.find_one(filters, None).await {
         Ok(res) => {
             let note = if let Some(res) = res {
-                NotesOutgoing {
-                    note_id: res.note_id,
-                    title: res.title,
-                    priority: res.priority,
-                    text: res.text,
-                    date: res.date.to_rfc3339(),
-                }
+                res
             } else {
                 return Err(StatusCode::NOT_FOUND);
             };
@@ -429,10 +416,9 @@ pub async fn delete_notes(
 
             _ => Ok((
                 StatusCode::OK,
-                Json(json!(doc! {
-                "response": format!("{:?} notes deleted and {:?} cannot be deleted",
-                deleted.len(),
-                not_deleted.len())})),
+                Json(json!(
+                    doc! {"response": format!("{:?} notes deleted and {:?} cannot be deleted", deleted.len(), not_deleted.len())}
+                )),
             )),
         },
     }
