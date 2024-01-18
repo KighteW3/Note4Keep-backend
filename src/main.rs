@@ -20,7 +20,7 @@ use crate::handlers::{
 };
 use crate::utils::check_integrity::check_integrity;
 use tower::{
-    timeout::{error, Timeout, TimeoutLayer},
+    timeout::{error, TimeoutLayer},
     BoxError, ServiceBuilder,
 };
 use tower_http::cors::{Any, CorsLayer};
