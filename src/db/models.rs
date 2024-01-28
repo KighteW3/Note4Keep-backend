@@ -21,3 +21,9 @@ pub struct Notes {
     #[serde(with = "chrono_datetime_as_bson_datetime")]
     pub date: DateTime<Utc>,
 }
+
+// Pending to decide:
+/* #[derive(Debug, Serialize, Deserialize)]
+pub struct userOptions {
+    pub
+} */
