@@ -30,7 +30,7 @@ pub struct Notes {
 }
 
 // Pending to decide:
-#[derive(Debug, Serialize, Deserialize)]
+/* #[derive(Debug, Serialize, Deserialize)]
 pub struct UserOptions {
     picture: String,
     theme: String,
@@ -81,4 +81,4 @@ impl UserOptions {
             })
         })
     }
-}
+} */
