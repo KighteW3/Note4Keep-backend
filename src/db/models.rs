@@ -1,13 +1,15 @@
-use alloc::task;
 use bson::{doc, serde_helpers::chrono_datetime_as_bson_datetime};
 use chrono::prelude::*;
-use hyper::StatusCode;
-use jsonwebtoken::TokenData;
-use mongodb::Collection;
+// use hyper::StatusCode;
+// use jsonwebtoken::TokenData;
+// use mongodb::Collection;
 use serde::{Deserialize, Serialize};
-use tokio::runtime::Handle;
+// use tokio::runtime::Handle;
+// use tokio::task;
 
-use crate::auth::jwt::Claims;
+// use crate::{auth::jwt::Claims, StateExtension};
+//
+// use super::connect::{database_coll, USERS_OPTIONS};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct User {
@@ -32,10 +34,12 @@ pub struct Notes {
 // Pending to decide:
 /* #[derive(Debug, Serialize, Deserialize)]
 pub struct UserOptions {
+    user: String,
     picture: String,
     theme: String,
-    filter_by_name: String,
-    filter_by_prio: String,
+    filter_order: String,
+    filter_by_name: bool,
+    filter_by_prio: bool,
 }
 
 pub enum Errors {
@@ -46,17 +50,17 @@ pub enum Errors {
 impl UserOptions {
     pub fn create(
         &self,
-        user: &String,
-        coll: Collection<UserOptions>,
+        coll_search: Collection<User>,
         claims: TokenData<Claims>,
+        state: StateExtension,
     ) -> Result<String, Errors> {
         task::block_in_place(move || {
             Handle::current().block_on(async move {
-                let coll = &coll;
+                let coll = database_coll(&state.db, USERS_OPTIONS).await;
 
-                let filters = doc! {"user": &user};
+                let filters = doc! {"user": &claims.claims.userid};
 
-                let exists = match coll.find_one(filters, None).await {
+                let exists = match coll_search.find_one(filters, None).await {
                     Ok(res) => match res {
                         Some(res2) => res2,
                         None => return Err(Errors::NotFound(StatusCode::NOT_FOUND)),
@@ -67,9 +71,16 @@ impl UserOptions {
                     }
                 };
 
-                // const data = UserOptions {}
+                let data = UserOptions {
+                    user: exists.user_id,
+                    picture: String::from("default.jpg"),
+                    theme: String::from("default"),
+                    filter_order: String::from("ascendent"),
+                    filter_by_name: false,
+                    filter_by_prio: false,
+                };
 
-                let created = match coll.insert_one(data, None).await {
+                let _created = match coll.insert_one(data, None).await {
                     Ok(res) => res,
                     Err(e) => {
                         println!("Error: {:?}", e);
@@ -77,8 +88,12 @@ impl UserOptions {
                     }
                 };
 
-                Ok(String::from("adawd"))
+                Ok(String::from("User options created with no trouble."))
             })
         })
     }
+} */
+
+/* impl Borrow<T> for UserOptions {
+    fn borrow() {}
 } */

@@ -4,6 +4,7 @@ use std::env;
 
 pub const USERS: &str = "users";
 pub const NOTES: &str = "notes";
+pub const USERS_OPTIONS: &str = "usersOptions";
 
 pub struct DbState {
     pub db: mongodb::Client,
