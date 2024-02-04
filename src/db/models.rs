@@ -37,8 +37,14 @@ pub struct UserOptions {
     user: String,
     picture: String,
     theme: String,
-    filter_order: char,
+    filter_order: OrderType,
     filter_by: FilterType,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+enum OrderType {
+    Ascendant,
+    Descendant,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -65,7 +71,7 @@ impl UserOptions {
 
                 let filters = doc! {"user": &claims.claims.userid};
 
-                let exists = match coll_search.find_one(filters, None).await {
+                let exists = match coll_search.find_one(filters.clone(), None).await {
                     Ok(res) => match res {
                         Some(res2) => res2,
                         None => return Err(Errors::Status(StatusCode::NOT_FOUND)),
@@ -80,11 +86,9 @@ impl UserOptions {
                     user: exists.user_id,
                     picture: String::from("default.jpg"),
                     theme: String::from("default"),
-                    filter_order: 'a',
+                    filter_order: OrderType::Ascendant,
                     filter_by: FilterType::ByName,
                 };
-
-                let filters = doc! {"user": &claims.claims.userid};
 
                 match coll.find_one(filters, None).await {
                     Ok(res) => match res {
@@ -97,8 +101,8 @@ impl UserOptions {
                     }
                 };
 
-                let _created = match coll.insert_one(data, None).await {
-                    Ok(res) => res,
+                match coll.insert_one(data, None).await {
+                    Ok(_) => {}
                     Err(e) => {
                         println!("Error: {:?}", e);
                         return Err(Errors::Mongo(e));
