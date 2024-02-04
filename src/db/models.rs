@@ -1,15 +1,15 @@
 use bson::{doc, serde_helpers::chrono_datetime_as_bson_datetime};
 use chrono::prelude::*;
-// use hyper::StatusCode;
-// use jsonwebtoken::TokenData;
-// use mongodb::Collection;
+use hyper::StatusCode;
+use jsonwebtoken::TokenData;
+use mongodb::Collection;
 use serde::{Deserialize, Serialize};
-// use tokio::runtime::Handle;
-// use tokio::task;
+use tokio::runtime::Handle;
+use tokio::task;
 
-// use crate::{auth::jwt::Claims, StateExtension};
-//
-// use super::connect::{database_coll, USERS_OPTIONS};
+use crate::{auth::jwt::Claims, StateExtension};
+
+use super::connect::{database_coll, USERS_OPTIONS};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct User {
@@ -32,19 +32,24 @@ pub struct Notes {
 }
 
 // Pending to decide:
-/* #[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct UserOptions {
     user: String,
     picture: String,
     theme: String,
-    filter_order: String,
-    filter_by_name: bool,
-    filter_by_prio: bool,
+    filter_order: char,
+    filter_by: FilterType,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+enum FilterType {
+    ByName,
+    ByPrio,
 }
 
 pub enum Errors {
     Mongo(mongodb::error::Error),
-    NotFound(StatusCode),
+    Status(StatusCode),
 }
 
 impl UserOptions {
@@ -56,14 +61,14 @@ impl UserOptions {
     ) -> Result<String, Errors> {
         task::block_in_place(move || {
             Handle::current().block_on(async move {
-                let coll = database_coll(&state.db, USERS_OPTIONS).await;
+                let coll = database_coll::<UserOptions>(&state.db, USERS_OPTIONS).await;
 
                 let filters = doc! {"user": &claims.claims.userid};
 
                 let exists = match coll_search.find_one(filters, None).await {
                     Ok(res) => match res {
                         Some(res2) => res2,
-                        None => return Err(Errors::NotFound(StatusCode::NOT_FOUND)),
+                        None => return Err(Errors::Status(StatusCode::NOT_FOUND)),
                     },
                     Err(e) => {
                         println!("Error: {:?}", e);
@@ -75,9 +80,21 @@ impl UserOptions {
                     user: exists.user_id,
                     picture: String::from("default.jpg"),
                     theme: String::from("default"),
-                    filter_order: String::from("ascendent"),
-                    filter_by_name: false,
-                    filter_by_prio: false,
+                    filter_order: 'a',
+                    filter_by: FilterType::ByName,
+                };
+
+                let filters = doc! {"user": &claims.claims.userid};
+
+                match coll.find_one(filters, None).await {
+                    Ok(res) => match res {
+                        None => {}
+                        Some(_) => return Err(Errors::Status(StatusCode::CONFLICT)),
+                    },
+                    Err(e) => {
+                        println!("Error: {:?}", e);
+                        return Err(Errors::Mongo(e));
+                    }
                 };
 
                 let _created = match coll.insert_one(data, None).await {
@@ -92,7 +109,7 @@ impl UserOptions {
             })
         })
     }
-} */
+}
 
 /* impl Borrow<T> for UserOptions {
     fn borrow() {}
