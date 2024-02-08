@@ -113,6 +113,35 @@ impl UserOptions {
             })
         })
     }
+
+    pub fn update(
+        &self,
+        claims: TokenData<Claims>,
+        state: StateExtension,
+    ) -> Result<String, Errors> {
+        task::block_in_place(move || {
+            Handle::current().block_on(async move {
+                let coll = database_coll::<UserOptions>(&state.db, USERS_OPTIONS).await;
+
+                let filters = doc! {"user": claims.claims.userid};
+
+                let _exists = match coll.find_one(filters, None).await {
+                    Ok(res) => match res {
+                        Some(options) => options,
+                        None => return Err(Errors::Status(StatusCode::NOT_FOUND)),
+                    },
+                    Err(e) => {
+                        println!("Error {:?}", e);
+                        return Err(Errors::Mongo(e));
+                    }
+                };
+
+                // let options = match coll.update_one().await;
+
+                Ok(String::from("awdasd"))
+            })
+        })
+    }
 }
 
 /* impl Borrow<T> for UserOptions {
