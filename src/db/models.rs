@@ -126,7 +126,7 @@ impl UserOptions {
 
                 let filters = doc! {"user": claims.claims.userid};
 
-                let _exists = match coll.find_one(filters.clone(), None).await {
+                let exists = match coll.find_one(filters.clone(), None).await {
                     Ok(res) => match res {
                         Some(options) => options,
                         None => return Err(Errors::Status(StatusCode::NOT_FOUND)),
@@ -136,27 +136,27 @@ impl UserOptions {
                         return Err(Errors::Mongo(e));
                     }
                 };
-                //
-                // let _data = UserOptions {
-                //     user: exists.user.clone(),
-                //     picture: String::from("default.jpg"),
-                //     theme: String::from("default.jpg"),
-                //     filter_by: FilterType::ByName,
-                //     filter_order: OrderType::Ascendant,
-                // };
-                //
-                // let data = doc! {"user": exists.user, "picture":
-                // String::from("default.jpg"),
-                // "theme": String::from("default"),
-                // "filter_order": 0, "filter_by": 0};
-                //
-                // let _options = match coll.update_one(filters, data, None).await {
-                //     Ok(_) => {}
-                //     Err(e) => {
-                //         println!("Error: {:?}", e);
-                //         return Err(Errors::Mongo(e));
-                //     }
-                // };
+
+                let _data = UserOptions {
+                    user: exists.user.clone(),
+                    picture: String::from("default.jpg"),
+                    theme: String::from("default.jpg"),
+                    filter_by: FilterType::ByName,
+                    filter_order: OrderType::Ascendant,
+                };
+
+                let data = doc! {"user": exists.user, "picture":
+                String::from("default.jpg"),
+                "theme": String::from("default"),
+                "filter_order": 0, "filter_by": 0};
+
+                let _options = match coll.update_one(filters, data, None).await {
+                    Ok(_) => {}
+                    Err(e) => {
+                        println!("Error: {:?}", e);
+                        return Err(Errors::Mongo(e));
+                    }
+                };
 
                 Ok(String::from("Not functional yet"))
             })
