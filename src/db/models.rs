@@ -1,15 +1,15 @@
 use bson::{doc, serde_helpers::chrono_datetime_as_bson_datetime, Document};
 use chrono::prelude::*;
-// use hyper::StatusCode;
-// use jsonwebtoken::TokenData;
-// use mongodb::Collection;
+use hyper::StatusCode;
+use jsonwebtoken::TokenData;
+use mongodb::Collection;
 use serde::{Deserialize, Serialize};
-// use tokio::runtime::Handle;
-// use tokio::task;
+use tokio::runtime::Handle;
+use tokio::task;
 
-// use crate::{auth::jwt::Claims, StateExtension};
+use crate::{auth::jwt::Claims, StateExtension};
 
-// use super::connect::{database_coll, USERS_OPTIONS};
+use super::connect::{database_coll, USERS_OPTIONS};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct User {
