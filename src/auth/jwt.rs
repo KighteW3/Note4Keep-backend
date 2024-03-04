@@ -1,6 +1,6 @@
 use std::env;
 
-use chrono::{prelude::*, Duration};
+use chrono::{prelude::*, Duration, LocalResult};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 
@@ -11,6 +11,40 @@ pub struct Claims {
     pub email: Option<String>,
     pub iat: i64,
     pub exp: i64,
+}
+
+fn add_to_date(y: i32, m: u32, _d: u32) -> LocalResult<DateTime<Utc>> {
+    let current = Utc::now();
+    let mut year = current.year();
+    let mut month = current.month();
+    let mut _day = current.day();
+
+    match y {
+        0 => {}
+        _ => year += y,
+    }
+
+    match m {
+        0 => {}
+        _ => {
+            let mut years_added = 0;
+            let mut munits = month + m;
+
+            loop {
+                if munits > 12 {
+                    munits = munits - 12;
+                    years_added += 1;
+                } else {
+                    break;
+                }
+            }
+
+            year += years_added;
+            month = munits;
+        }
+    }
+
+    Utc.with_ymd_and_hms(year, month, 5, 0, 0, 0)
 }
 
 pub async fn create_jwt(
@@ -28,17 +62,7 @@ pub async fn create_jwt(
             .checked_add_signed(Duration::seconds(60))
             .expect("valid timestamp")
             .timestamp(),
-        exp: Utc
-            .with_ymd_and_hms(
-                Utc::now().year() + 1,
-                Utc::now().month(),
-                Utc::now().day(),
-                Utc::now().hour(),
-                Utc::now().minute(),
-                Utc::now().second(),
-            )
-            .unwrap()
-            .timestamp(),
+        exp: add_to_date(0, 3, 0).unwrap().timestamp(),
     };
 
     let token = encode(

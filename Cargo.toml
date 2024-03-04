@@ -7,21 +7,21 @@ edition = "2021"
 
 [dependencies]
 axum = "0.7.2"
-hyper = { version = "1.1.0", features = ["full"] }
-tokio = { version = "1.35.1", features = ["full"] }
+hyper = { version = "1.2.0", features = ["full"] }
+tokio = { version = "1.36.0", features = ["full"] }
 tower = { version = "0.4.13", features = ["timeout"] }
-tower-http = { version = "0.5.0", features = ["full"] }
+tower-http = { version = "0.5.2", features = ["full"] }
 serde_json = "1.0"
 dotenv = "0.15.0"
 futures = "0.3"
-mongodb = "2.8.0"
-serde = "1.0.193"
-axum-macros = "0.4.0"
+mongodb = "2.8.1"
+serde = "1.0.197"
+axum-macros = "0.4.1"
 once_cell = "1.19.0"
 async-once-cell = "0.5.3"
 bcrypt = "0.15.0"
-chrono = "0.4.31"
+chrono = "0.4.34"
 jsonwebtoken = "9.2.0"
 rand = "0.8.5"
-regex = "1.10.2"
-bson = { version = "2.8.1", features = ["default", "chrono-0_4"]}
+regex = "1.10.3"
+bson = { version = "2.9.0", features = ["default", "chrono-0_4"]}
