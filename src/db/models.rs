@@ -1,4 +1,4 @@
-use bson::{doc, serde_helpers::chrono_datetime_as_bson_datetime, Document};
+use bson::{doc, serde_helpers::chrono_datetime_as_bson_datetime};
 use chrono::prelude::*;
 use hyper::StatusCode;
 use jsonwebtoken::TokenData;
@@ -118,7 +118,7 @@ impl UserOptions {
         &self,
         claims: TokenData<Claims>,
         state: StateExtension,
-        _update: Document,
+        update: UserOptions,
     ) -> Result<String, Errors> {
         task::block_in_place(move || {
             Handle::current().block_on(async move {
@@ -145,10 +145,11 @@ impl UserOptions {
                     filter_order: OrderType::Ascendant,
                 };
 
-                let data = doc! {"user": exists.user, "picture":
-                String::from("default.jpg"),
-                "theme": String::from("default"),
-                "filter_order": 0, "filter_by": 0};
+                let data = doc! {"user": exists.user,
+                "picture": update.picture,
+                "theme": update.theme,
+                "filter_order": 0,
+                "filter_by": 1};
 
                 let _options = match coll.update_one(filters, data, None).await {
                     Ok(_) => {}
