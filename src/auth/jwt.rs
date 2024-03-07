@@ -59,7 +59,7 @@ pub async fn create_jwt(
         userid: id,
         email,
         iat: Utc::now()
-            .checked_add_signed(Duration::seconds(60))
+            .checked_add_signed(Duration::try_seconds(60).unwrap())
             .expect("valid timestamp")
             .timestamp(),
         exp: add_to_date(0, 3, 0).unwrap().timestamp(),
