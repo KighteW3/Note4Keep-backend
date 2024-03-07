@@ -1,4 +1,4 @@
-use bson::{doc, serde_helpers::chrono_datetime_as_bson_datetime};
+use bson::{doc, serde_helpers::chrono_datetime_as_bson_datetime, Bson};
 use chrono::prelude::*;
 use hyper::StatusCode;
 use jsonwebtoken::TokenData;
@@ -43,8 +43,8 @@ pub struct UserOptions {
 
 #[derive(Debug, Serialize, Deserialize)]
 enum OrderType {
-    Ascendant,
-    Descendant,
+    Newest,
+    Latest,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -86,7 +86,7 @@ impl UserOptions {
                     user: exists.user_id,
                     picture: String::from("default.jpg"),
                     theme: String::from("default"),
-                    filter_order: OrderType::Ascendant,
+                    filter_order: OrderType::Newest,
                     filter_by: FilterType::ByName,
                 };
 
@@ -137,29 +137,27 @@ impl UserOptions {
                     }
                 };
 
-                let _data = UserOptions {
+                /* let _data = UserOptions {
                     user: exists.user.clone(),
                     picture: String::from("default.jpg"),
                     theme: String::from("default.jpg"),
                     filter_by: FilterType::ByName,
-                    filter_order: OrderType::Ascendant,
-                };
+                    filter_order: OrderType::Newest,
+                }; */
 
                 let data = doc! {"user": exists.user,
                 "picture": update.picture,
                 "theme": update.theme,
-                "filter_order": 0,
-                "filter_by": 1};
+                "filter_order": OrderType::Newest,
+                "filter_by": FilterType::ByName};
 
-                let _options = match coll.update_one(filters, data, None).await {
-                    Ok(_) => {}
+                match coll.update_one(filters, data, None).await {
+                    Ok(_) => Ok(String::from("User options updated succesfully")),
                     Err(e) => {
                         println!("Error: {:?}", e);
-                        return Err(Errors::Mongo(e));
+                        Err(Errors::Mongo(e))
                     }
-                };
-
-                Ok(String::from("Not functional yet"))
+                }
             })
         })
     }
@@ -168,3 +166,21 @@ impl UserOptions {
 /* impl Borrow<T> for UserOptions {
     fn borrow() {}
 } */
+
+impl From<OrderType> for Bson {
+    fn from(order_type: OrderType) -> Self {
+        match order_type {
+            OrderType::Newest => Bson::String(String::from("newest")),
+            OrderType::Latest => Bson::String(String::from("latest")),
+        }
+    }
+}
+
+impl From<FilterType> for Bson {
+    fn from(filter_type: FilterType) -> Self {
+        match filter_type {
+            FilterType::ByName => Bson::String(String::from("name")),
+            FilterType::ByPrio => Bson::String(String::from("priority")),
+        }
+    }
+}
