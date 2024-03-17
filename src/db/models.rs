@@ -68,12 +68,15 @@ impl UserOptions {
             Handle::current().block_on(async move {
                 let coll = database_coll::<UserOptions>(&state.db, USERS_OPTIONS).await;
 
-                let filters = doc! {"user": user};
+                let filters = doc! {"user_id": user};
 
                 let exists = match coll_search.find_one(filters.clone(), None).await {
                     Ok(res) => match res {
                         Some(res2) => res2,
-                        None => return Err(Errors::Status(StatusCode::NOT_FOUND)),
+                        None => {
+                            println!("Aqui es problema");
+                            return Err(Errors::Status(StatusCode::NOT_FOUND));
+                        }
                     },
                     Err(e) => {
                         println!("Error: {:?}", e);

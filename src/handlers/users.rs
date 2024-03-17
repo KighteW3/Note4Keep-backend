@@ -109,18 +109,16 @@ pub async fn create_user(
     let coll = database_coll::<User>(&state.db, USERS).await;
     let filters = doc! {"username": &req.username};
 
-    let cursor = match coll.find_one(filters, None).await {
-        Ok(cursor) => cursor,
+    match coll.find_one(filters, None).await {
+        Ok(cursor) => match cursor {
+            None => {}
+            Some(_) => return Err(StatusCode::CONFLICT),
+        },
         Err(e) => {
             println!("Error: {:?}", e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
-
-    match cursor {
-        None => {}
-        Some(_) => return Err(StatusCode::CONFLICT),
-    }
 
     let encoded_pass = match encrypt(&req.password).await {
         Ok(pass) => pass,
@@ -146,7 +144,7 @@ pub async fn create_user(
         ip: None,
     };
 
-    match coll.insert_one(data, None).await {
+    match coll.insert_one(&data, None).await {
         Ok(_) => {}
         Err(e) => {
             println!("Error: {:?}", e);
@@ -162,7 +160,7 @@ pub async fn create_user(
         }
     };
 
-    let user_options = match UserOptions::create(coll, req.username, state) {
+    let user_options = match UserOptions::create(coll, data.user_id, state) {
         Ok(msg) => msg,
         Err(e) => match e {
             Errors::Mongo(e) => {
