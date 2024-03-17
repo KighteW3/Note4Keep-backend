@@ -9,12 +9,15 @@ use mongodb::{
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-use crate::auth::{
-    bcrypt::{compare, encrypt},
-    jwt::{compare_jwt, create_jwt},
-};
-use crate::db::connect::USERS;
+use crate::db::{connect::USERS, models::UserOptions};
 use crate::utils::{get_token::get_token, random_id::random_id};
+use crate::{
+    auth::{
+        bcrypt::{compare, encrypt},
+        jwt::{compare_jwt, create_jwt},
+    },
+    db::models::Errors,
+};
 use crate::{
     db::{connect::database_coll, models::User},
     StateExtension,
@@ -144,22 +147,36 @@ pub async fn create_user(
     };
 
     match coll.insert_one(data, None).await {
-        Ok(_) => match create_jwt(req.username, userid, email).await {
-            Ok(token) => Ok((
-                StatusCode::OK,
-                Json(json!(doc! {"response": "User Created", "token": token})),
-            )),
-            Err(e) => {
-                println!("Error: {:?}", e);
-
-                Err(StatusCode::INTERNAL_SERVER_ERROR)
-            }
-        },
+        Ok(_) => {}
         Err(e) => {
             println!("Error: {:?}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
-    }
+    };
+
+    let token = match create_jwt(req.username.clone(), userid, email).await {
+        Ok(token) => token,
+        Err(e) => {
+            println!("Error: {:?}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    let user_options = match UserOptions::create(coll, req.username, state) {
+        Ok(msg) => msg,
+        Err(e) => match e {
+            Errors::Mongo(e) => {
+                println!("Error: {:?}", e);
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
+            Errors::Status(res) => return Err(res),
+        },
+    };
+
+    Ok((
+        StatusCode::OK,
+        Json(json!(doc! {"response": "User Created", "token": token})),
+    ))
 }
 
 #[debug_handler]

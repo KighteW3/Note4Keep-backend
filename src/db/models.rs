@@ -60,16 +60,15 @@ pub enum Errors {
 
 impl UserOptions {
     pub fn create(
-        &self,
         coll_search: Collection<User>,
-        claims: TokenData<Claims>,
+        user: String,
         state: StateExtension,
     ) -> Result<String, Errors> {
         task::block_in_place(move || {
             Handle::current().block_on(async move {
                 let coll = database_coll::<UserOptions>(&state.db, USERS_OPTIONS).await;
 
-                let filters = doc! {"user": &claims.claims.userid};
+                let filters = doc! {"user": user};
 
                 let exists = match coll_search.find_one(filters.clone(), None).await {
                     Ok(res) => match res {
@@ -115,7 +114,6 @@ impl UserOptions {
     }
 
     pub fn update(
-        &self,
         claims: TokenData<Claims>,
         state: StateExtension,
         update: UserOptions,
