@@ -175,7 +175,9 @@ pub async fn create_user(
 
     Ok((
         StatusCode::OK,
-        Json(json!(doc! {"response": "User Created", "token": token})),
+        Json(json!(
+            doc! {"response": format!("User Created ({:?})", user_options), "token": token}
+        )),
     ))
 }
 
