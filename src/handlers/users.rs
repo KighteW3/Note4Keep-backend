@@ -9,12 +9,15 @@ use mongodb::{
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-use crate::auth::{
-    bcrypt::{compare, encrypt},
-    jwt::{compare_jwt, create_jwt},
-};
-use crate::db::connect::USERS;
+use crate::db::{connect::USERS, models::UserOptions};
 use crate::utils::{get_token::get_token, random_id::random_id};
+use crate::{
+    auth::{
+        bcrypt::{compare, encrypt},
+        jwt::{compare_jwt, create_jwt},
+    },
+    db::models::Errors,
+};
 use crate::{
     db::{connect::database_coll, models::User},
     StateExtension,
@@ -106,18 +109,16 @@ pub async fn create_user(
     let coll = database_coll::<User>(&state.db, USERS).await;
     let filters = doc! {"username": &req.username};
 
-    let cursor = match coll.find_one(filters, None).await {
-        Ok(cursor) => cursor,
+    match coll.find_one(filters, None).await {
+        Ok(cursor) => match cursor {
+            None => {}
+            Some(_) => return Err(StatusCode::CONFLICT),
+        },
         Err(e) => {
             println!("Error: {:?}", e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
-
-    match cursor {
-        None => {}
-        Some(_) => return Err(StatusCode::CONFLICT),
-    }
 
     let encoded_pass = match encrypt(&req.password).await {
         Ok(pass) => pass,
@@ -143,23 +144,39 @@ pub async fn create_user(
         ip: None,
     };
 
-    match coll.insert_one(data, None).await {
-        Ok(_) => match create_jwt(req.username, userid, email).await {
-            Ok(token) => Ok((
-                StatusCode::OK,
-                Json(json!(doc! {"response": "User Created", "token": token})),
-            )),
-            Err(e) => {
-                println!("Error: {:?}", e);
-
-                Err(StatusCode::INTERNAL_SERVER_ERROR)
-            }
-        },
+    match coll.insert_one(&data, None).await {
+        Ok(_) => {}
         Err(e) => {
             println!("Error: {:?}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
-    }
+    };
+
+    let token = match create_jwt(req.username.clone(), userid, email).await {
+        Ok(token) => token,
+        Err(e) => {
+            println!("Error: {:?}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    let user_options = match UserOptions::create(coll, data.user_id, state) {
+        Ok(msg) => msg,
+        Err(e) => match e {
+            Errors::Mongo(e) => {
+                println!("Error: {:?}", e);
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
+            Errors::Status(res) => return Err(res),
+        },
+    };
+
+    Ok((
+        StatusCode::OK,
+        Json(json!(
+            doc! {"response": format!("User Created ({:?})", user_options), "token": token}
+        )),
+    ))
 }
 
 #[debug_handler]
@@ -170,18 +187,15 @@ pub async fn log_in(
     let coll = database_coll::<User>(&state.db, USERS).await;
     let filters = doc! {"username": &req.username};
 
-    let cursor = match coll.find_one(filters, None).await {
-        Ok(res) => res,
+    let user_stored = match coll.find_one(filters, None).await {
+        Ok(res) => match res {
+            Some(user) => user,
+            _ => return Err(StatusCode::NOT_FOUND),
+        },
         Err(e) => {
             println!("Error: {:?}", e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
-    };
-
-    let user_stored = if let Some(res) = cursor {
-        res
-    } else {
-        return Err(StatusCode::NOT_FOUND);
     };
 
     let authenticated = match compare(&req.password, &user_stored.password).await {
@@ -192,24 +206,44 @@ pub async fn log_in(
         }
     };
 
+    let email;
+
     if authenticated {
-        let email = if let Some(e) = user_stored.email {
+        email = if let Some(e) = user_stored.email {
             Some(e)
         } else {
             None
         };
-
-        match create_jwt(req.username, user_stored.user_id, email).await {
-            Ok(token) => Ok((
-                StatusCode::OK,
-                Json(json!(doc! {"response": "Login Successful", "token": token})),
-            )),
-            Err(e) => {
-                println!("Error: {:?}", e);
-                Err(StatusCode::INTERNAL_SERVER_ERROR)
-            }
-        }
     } else {
-        Err(StatusCode::UNAUTHORIZED)
+        return Err(StatusCode::UNAUTHORIZED);
     }
+
+    let token = match create_jwt(req.username, user_stored.user_id.clone(), email).await {
+        Ok(token) => token,
+        Err(e) => {
+            println!("Error: {:?}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    let user_options = match UserOptions::create(coll, user_stored.user_id, state) {
+        Ok(msg) => msg,
+        Err(e) => match e {
+            Errors::Mongo(e) => {
+                println!("Error: {:?}", e);
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
+            Errors::Status(e) => match e {
+                StatusCode::CONFLICT => String::from("UserOptions alredy exists"),
+                _ => return Err(e),
+            },
+        },
+    };
+
+    Ok((
+        StatusCode::OK,
+        Json(json!(
+            doc! {"response": format!("Login Successful ({})", user_options), "token": token}
+        )),
+    ))
 }
