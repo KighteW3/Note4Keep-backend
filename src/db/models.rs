@@ -157,10 +157,6 @@ impl UserOptions {
     }
 }
 
-/* impl Borrow<T> for UserOptions {
-    fn borrow() {}
-} */
-
 impl From<OrderType> for Bson {
     fn from(order_type: OrderType) -> Self {
         match order_type {
