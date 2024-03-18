@@ -68,7 +68,7 @@ impl UserOptions {
             Handle::current().block_on(async move {
                 let coll = database_coll::<UserOptions>(&state.db, USERS_OPTIONS).await;
 
-                let filters = doc! {"user_id": user};
+                let filters = doc! {"user_id": &user};
 
                 let exists = match coll_search.find_one(filters.clone(), None).await {
                     Ok(res) => match res {
@@ -91,6 +91,8 @@ impl UserOptions {
                     filter_order: OrderType::Newest,
                     filter_by: FilterType::ByName,
                 };
+
+                let filters = doc! {"user": user};
 
                 match coll.find_one(filters, None).await {
                     Ok(res) => match res {
