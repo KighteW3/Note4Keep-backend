@@ -31,7 +31,6 @@ pub struct Notes {
     pub date: DateTime<Utc>,
 }
 
-// Pending to decide:
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserOptions {
     user: String,
@@ -139,14 +138,6 @@ impl UserOptions {
                         return Err(Errors::Mongo(e));
                     }
                 };
-
-                /* let _data = UserOptions {
-                    user: exists.user.clone(),
-                    picture: String::from("default.jpg"),
-                    theme: String::from("default.jpg"),
-                    filter_by: FilterType::ByName,
-                    filter_order: OrderType::Newest,
-                }; */
 
                 let data = doc! {"user": exists.user,
                 "picture": update.picture,
