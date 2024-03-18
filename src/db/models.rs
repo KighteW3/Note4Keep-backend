@@ -1,4 +1,4 @@
-use bson::{doc, serde_helpers::chrono_datetime_as_bson_datetime, Document};
+use bson::{doc, serde_helpers::chrono_datetime_as_bson_datetime, Bson};
 use chrono::prelude::*;
 use hyper::StatusCode;
 use jsonwebtoken::TokenData;
@@ -154,5 +154,23 @@ impl UserOptions {
                 }
             })
         })
+    }
+}
+
+impl From<OrderType> for Bson {
+    fn from(order_type: OrderType) -> Self {
+        match order_type {
+            OrderType::Newest => Bson::String(String::from("newest")),
+            OrderType::Latest => Bson::String(String::from("latest")),
+        }
+    }
+}
+
+impl From<FilterType> for Bson {
+    fn from(filter_type: FilterType) -> Self {
+        match filter_type {
+            FilterType::ByName => Bson::String(String::from("name")),
+            FilterType::ByPrio => Bson::String(String::from("priority")),
+        }
     }
 }
