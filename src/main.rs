@@ -16,7 +16,7 @@ use crate::handlers::{
         create_note, delete_all_notes, delete_notes, delete_spec_note, get_notes, some_note,
         spec_note, update_note,
     },
-    users::{create_user, list_users, log_in, user_check},
+    users::{create_user, get_user_options, list_users, log_in, user_check},
 };
 use crate::utils::check_integrity::check_integrity;
 use tower::{
@@ -74,6 +74,7 @@ async fn main() {
         .route("/api/notes/delete-notes", delete(delete_notes))
         .route("/api/notes/delete-all-notes", delete(delete_all_notes))
         .route("/api/notes/update-note", patch(update_note))
+        .route("/api/users/get-user-options", post(get_user_options))
         .layer(
             ServiceBuilder::new()
                 .layer(Extension(db_state))

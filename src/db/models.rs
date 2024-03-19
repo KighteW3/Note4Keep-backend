@@ -77,6 +77,8 @@ impl UserOptions {
                     Err(e) => return Err(Errors::Mongo(e)),
                 }
 
+                let filters = doc! {"user": user};
+
                 let user_options = match coll.find_one(filters, None).await {
                     Ok(res) => match res {
                         Some(user_options) => user_options,
