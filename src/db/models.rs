@@ -58,6 +58,40 @@ pub enum Errors {
 }
 
 impl UserOptions {
+    pub fn get(
+        coll_search: Collection<User>,
+        user: String,
+        state: StateExtension,
+    ) -> Result<UserOptions, Errors> {
+        task::block_in_place(move || {
+            Handle::current().block_on(async move {
+                let coll = database_coll::<UserOptions>(&state.db, USERS_OPTIONS).await;
+
+                let filters = doc! {"user_id": &user};
+
+                match coll_search.find_one(filters.clone(), None).await {
+                    Ok(res) => match res {
+                        Some(_) => {}
+                        None => return Err(Errors::Status(StatusCode::NOT_FOUND)),
+                    },
+                    Err(e) => return Err(Errors::Mongo(e)),
+                }
+
+                let filters = doc! {"user": user};
+
+                let user_options = match coll.find_one(filters, None).await {
+                    Ok(res) => match res {
+                        Some(user_options) => user_options,
+                        None => return Err(Errors::Status(StatusCode::NOT_FOUND)),
+                    },
+                    Err(e) => return Err(Errors::Mongo(e)),
+                };
+
+                Ok(user_options)
+            })
+        })
+    }
+
     pub fn create(
         coll_search: Collection<User>,
         user: String,

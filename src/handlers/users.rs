@@ -247,3 +247,34 @@ pub async fn log_in(
         )),
     ))
 }
+
+#[debug_handler]
+pub async fn get_user_options(
+    state: StateExtension,
+    headers: HeaderMap,
+) -> Result<(StatusCode, Json<Value>), StatusCode> {
+    let coll = database_coll::<User>(&state.db, USERS).await;
+
+    let token = match get_token(&headers) {
+        Ok(res) => res,
+        Err(e) => return Err(e),
+    };
+
+    let claims = match compare_jwt(&token).await {
+        Ok(res) => res,
+        Err(_) => return Err(StatusCode::UNAUTHORIZED),
+    };
+
+    let user_options = match UserOptions::get(coll, claims.claims.userid, state) {
+        Ok(res) => res,
+        Err(e) => match e {
+            Errors::Mongo(e) => {
+                println!("Error: {:?}", e);
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
+            Errors::Status(e) => return Err(e),
+        },
+    };
+
+    Ok((StatusCode::OK, Json(json!(user_options))))
+}
